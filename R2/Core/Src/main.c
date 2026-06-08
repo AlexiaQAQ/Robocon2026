@@ -35,6 +35,7 @@
 #include "chassis.h"
 #include "uart_task.h"
 #include "solenoid_valves.h"
+#include "arm.h"
 
 /* ⚠️ Removed (2026-06-06 mechanical redesign):
    four_steering_wheel_ik.c/h — old 4 steering wheel kinematics
@@ -124,8 +125,8 @@ static void system_enable_handler(void)
 		/* CH4 rising edge: enable all subsystems */
 		sys_enabled = true;
 		chassis_enable(&hcan1);               // CAN1: 全向轮×4 + 抬升×4
-		/* TODO: re-add dual-arm enable when new module ready */
-		/* TODO: re-add upstairs enable (hcan3/hcan5) when ready */      
+		arm_left_enable(&hcan2);                // CAN2: 左臂 ID 1-3
+		arm_right_enable(&hcan2);               // CAN2: 右臂 ID 4-6
 		dm_enable_mcp2515(&hcan3, 0x01);   // hcan3: 夹爪翻转电机
 	}
 	else if (!ch4 && last_ch4)
@@ -133,8 +134,8 @@ static void system_enable_handler(void)
 		/* CH4 falling edge: disable all subsystems & safe stop */
 		sys_enabled = false;
 		chassis_disable(&hcan1);              // CAN1: 全向轮×4 + 抬升×4
-		/* TODO: re-add dual-arm disable when new module ready */
-		/* TODO: re-add upstairs disable when ready */      
+		arm_left_disable(&hcan2);               // CAN2: 左臂 ID 1-3
+		arm_right_disable(&hcan2);              // CAN2: 右臂 ID 4-6
 		dm_disable_mcp2515(&hcan3, 0x01);  // hcan3: 夹爪翻转电机
 		set_vx = 0;
 		set_vy = 0;
@@ -190,7 +191,7 @@ void sbus_task(void *parameter)
 			set_vy = (ch_val >= 1017 && ch_val <= 1030) ? 0 : Map(ch_val, 240, 1780, -10000, 10000);
 
 			ch_val = sbus_ch.ch[0];
-			set_vw = (ch_val >= 1020 && ch_val <= 1028) ? 0 : Map(ch_val, 268, 1783, -10000, 10000);
+			set_vw = (ch_val >= 1020 && ch_val <= 1028) ? 0 : Map(ch_val, 268, 1783, -30000, 30000);
 
 			/* TODO: CH8/CH9 gripper control (old YV3/YV4/YV5 removed) */
 		}
@@ -298,6 +299,14 @@ void up_cs_task(void *parameter)
 				if (weapon_gripper == 1)      { YV1(1); }  // 打开夹爪
 				else if (weapon_gripper == 2) { YV1(0); }  // 闭合夹爪
 				// weapon_gripper=0 保持, 不更新
+
+				/* 左吸盘 YV2: 0=保持 1=吸气(YV2开) 2=松开(YV2关) */
+				if (left_sucker == 1)      { YV2(1); }
+				else if (left_sucker == 2) { YV2(0); }
+
+				/* 右吸盘 YV3: 0=保持 1=吸气(YV3开) 2=松开(YV3关) */
+				if (right_sucker == 1)      { YV3(1); }
+				else if (right_sucker == 2) { YV3(0); }
 			}
 
 			/* CAN1 抬升电机位置控制 */
@@ -315,20 +324,30 @@ void up_cs_task(void *parameter)
 
 void arm_task(void *parameter)
 {
-	/* ⚠️ TODO: replace with dual-arm control (left + right)
-	   was drive_arm_to_ik_3d() from deleted arm.c, now needs
-	   two independent arm IK solvers for left/right arms */
+	/*
+	 * 左右双机械臂控制 (CAN2, DM4340 位置模式):
+	 *   手动模式: 双机械臂回原点
+	 *   自动模式: 左臂串口 left_pitch1~3 (ID2方向已适配取反)
+	 *             右臂保持原点 (暂不接入串口)
+	 */
 	while (1)
 	{
+		float vel;
 		if (sys_enabled)
 		{
 			if (!ch_high(5))
 			{
-				/* TODO: dual-arm safe position */
+				/* 手动模式: 双机械臂回原点 */
+				vel = ARM_VEL_SLOW;
+				arm_left_set(&hcan2,  ARM_L_ORIGIN_P1, ARM_L_ORIGIN_P2, ARM_L_ORIGIN_P3, vel);
+				arm_right_set(&hcan2, ARM_R_ORIGIN_P1, ARM_R_ORIGIN_P2, ARM_R_ORIGIN_P3, vel);
 			}
 			else
 			{
-				/* TODO: dual-arm IK: use fb_des/lr_des/ud_des/end_des from UART2 */
+				/* 自动模式: 双机械臂走串口 (ID2/4/6方向已适配) */
+				vel = (lift_mode == 1) ? ARM_VEL_FAST : ARM_VEL_SLOW;
+				arm_left_update(&hcan2, vel);
+				arm_right_update(&hcan2, vel);
 			}
 		}
 

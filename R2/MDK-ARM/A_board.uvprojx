@@ -1901,6 +1901,16 @@
               <FileType>5</FileType>
               <FilePath>..\Lib\solenoid_valves.h</FilePath>
             </File>
+            <File>
+              <FileName>arm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Lib\arm.c</FilePath>
+            </File>
+            <File>
+              <FileName>arm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Lib\arm.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

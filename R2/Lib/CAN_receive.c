@@ -1,4 +1,5 @@
-#include "CAN_receive.h" 
+#include "CAN_receive.h"
+#include "arm.h" 
 
 motor_measure_t      motor_chassis[4],can2_motor_chassis[4];
 
@@ -46,7 +47,7 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 				
 	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &rx_header, rx_data);
     
-	can2_rx_callback(rx_data);
+	arm_can2_rx_callback(rx_data);
 }
 
 

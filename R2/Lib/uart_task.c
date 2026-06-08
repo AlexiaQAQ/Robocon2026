@@ -13,9 +13,9 @@ uint8_t  lift_mode         = 0;
 uint16_t lift_front_actual = 0;
 uint16_t lift_back_actual  = 0;
 
-/* 机械臂 */
-int16_t left_pitch1  = 0, left_pitch2  = 0, left_pitch3  = 0;
-int16_t right_pitch1 = 0, right_pitch2 = 0, right_pitch3 = 0;
+/* 机械臂 (协议值 mrad, 初始化为原点等效值, 已计入 arm_*_update 内的方向转换) */
+int16_t left_pitch1  = 0,     left_pitch2  = 2990,  left_pitch3  = -1440;
+int16_t right_pitch1 = 0,     right_pitch2 = 2990,  right_pitch3 = -1440;
 
 /* 吸盘 / 武器 */
 uint8_t left_sucker    = 0;
@@ -53,13 +53,20 @@ static void build_status_frame(void)
     stat_buf[7]  = 0xFF; stat_buf[8]  = 0xFF;  // tof_front_back
     stat_buf[9]  = 0xFF; stat_buf[10] = 0xFF;  // tof_back_front
     stat_buf[11] = 0xFF; stat_buf[12] = 0xFF;  // tof_back_back
-    // TODO: 机械臂角度回传 (当前填 0)
-    stat_buf[13] = 0; stat_buf[14] = 0;  // left_pitch1
-    stat_buf[15] = 0; stat_buf[16] = 0;  // left_pitch2
-    stat_buf[17] = 0; stat_buf[18] = 0;  // left_pitch3
-    stat_buf[19] = 0; stat_buf[20] = 0;  // right_pitch1
-    stat_buf[21] = 0; stat_buf[22] = 0;  // right_pitch2
-    stat_buf[23] = 0; stat_buf[24] = 0;  // right_pitch3
+    // 左臂角度 (mrad, big-endian, 回传当前目标值 → TODO: 从编码器读取实际值)
+    stat_buf[13] = (uint8_t)(left_pitch1 >> 8);
+    stat_buf[14] = (uint8_t)(left_pitch1 & 0xFF);
+    stat_buf[15] = (uint8_t)(left_pitch2 >> 8);
+    stat_buf[16] = (uint8_t)(left_pitch2 & 0xFF);
+    stat_buf[17] = (uint8_t)(left_pitch3 >> 8);
+    stat_buf[18] = (uint8_t)(left_pitch3 & 0xFF);
+    // 右臂角度 (mrad, 待实现 → 填 0)
+    stat_buf[19] = (uint8_t)(right_pitch1 >> 8);
+    stat_buf[20] = (uint8_t)(right_pitch1 & 0xFF);
+    stat_buf[21] = (uint8_t)(right_pitch2 >> 8);
+    stat_buf[22] = (uint8_t)(right_pitch2 & 0xFF);
+    stat_buf[23] = (uint8_t)(right_pitch3 >> 8);
+    stat_buf[24] = (uint8_t)(right_pitch3 & 0xFF);
     stat_buf[25] = 0;    // reserved
     stat_buf[26] = 0xEE;
 }
