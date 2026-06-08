@@ -1,5 +1,12 @@
 # Robocon 2026 — R2主控固件 (A板)
 
+[![Gitee](https://img.shields.io/badge/Gitee-robocon2026-C71D23?logo=gitee)](https://gitee.com/alexiaqaq/robocon2026)
+[![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
+[![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
+[![IDE](https://img.shields.io/badge/IDE-Keil%20MDK-009F4D)](https://www.keil.com/)
+
+> 📖 [English version](README.en.md)
+
 ## 概述
 
 本项目为 Robocon 2026 赛季 R2 机器人的主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS** 实时操作系统开发。
@@ -55,7 +62,7 @@
 ### 目录结构
 
 ```
-R2_0606/
+R2/
 ├── Core/Src/               # CubeMX 生成 + 主逻辑
 │   ├── main.c              # 主程序：任务创建 + 控制逻辑
 │   ├── freertos.c          # FreeRTOS 配置 (静态分配 Idle 任务)
@@ -71,14 +78,17 @@ R2_0606/
 │   ├── motor_control.c/h   # DM/YUN 电机 MIT/位置模式控制
 │   ├── pid.c/h             # PID 控制器 (位置式/增量式)
 │   ├── chassis.c/h         # [新] 全向轮运动学 + 独立抬升控制
+│   ├── solenoid_valves.c/h  # 电磁阀 YV1 位操作 (CAN ID 0x300)
 │   ├── uart_task.c/h       # 串口任务 (UART1/2 解析 + USART3 传感器帧)
 │   └── imu.c/h             # HLK-AS201 IMU 欧拉角解析
+├── Doc/                     # 协议文档
+│   └── rc26_vehicle_serial_protocol_final.md
 ├── Drivers/                # STM32 HAL + CMSIS
 ├── Middlewares/            # FreeRTOS 源码
 └── MDK-ARM/                # Keil 工程文件
 ```
 
-> **已删除**: `four_steering_wheel_ik.c/h`（四舵轮运动学）、`upstairs.c/h`（旧升降）、`arm.c/h`（旧单机械臂）— 均于 2026-06-06；`solenoid_valves.c/h` 恢复使用 (YV1 电磁阀)
+> **已删除** (2026-06-06): `four_steering_wheel_ik.c/h`（四舵轮运动学）、`upstairs.c/h`（旧升降）、`arm.c/h`（旧单机械臂）
 
 ### FreeRTOS 任务
 
@@ -87,12 +97,12 @@ R2_0606/
 | `start_task` | 一次性 | 256 | 0 | 初始化外设和子系统，创建子任务后自销毁 |
 | `sbus_task` | 10ms | 256 | 0 | SBUS 解码 + 遥控速度映射 + 模式切换 + CH4 使能边沿检测 + CH5下降沿通知 |
 | `uart_task` | 100ms | 128 | 0 | 串口命令解析 (UART1 底盘/阀 + UART2 机械臂) + USART3 传感器帧 5Hz |
-| `chassis_task` | ~2ms | 1280 | 0 | 全向轮运动学 + CAN1 MIT 驱动 (chassis_update) |
-| `up_cs_task` | ~50ms | 256 | 0 | 抬升电机位置控制 + 夹爪翻转电机 (lift_update) |
+| `chassis_task` | ~2ms | 1280 | 0 | ✅ 全向轮运动学 + CAN1 MIT 驱动 (chassis_update) |
+| `up_cs_task` | ~50ms | 256 | 0 | ✅ 独立抬升电机位置控制 + 夹爪翻转电机 (lift_update) |
 | `arm_task` | 10ms | 512 | 0 | ⚠️ 左右双机械臂控制 (待重构) |
 | `led_task` | 200ms | 56 | 0 | GPIOE[0:7] 流水灯 |
 
-> ⚠️ `chassis_task` 和 `up_cs_task` 为旧舵轮/旧升降代码的残留骨架，需按新机械结构重写。`imu_task()` 模块已实现但当前 `main.c` 未创建该任务。
+> ⚠️ `arm_task` 为旧单机械臂代码残留骨架，需按双机械臂重写。`imu_task()` 模块已实现但当前 `main.c` 未创建该任务。
 
 ### 启动流程
 
@@ -238,7 +248,19 @@ CH4 (主使能, 阈值1700)
 
 ## 已知问题
 
-- YV9/YV10 宏仍有数组索引 bug (YV9 YV10 翻转操作错误使用 can_can_send_data[0])，当前未使用 YV9/YV10
+- `solenoid_valves.h` 中 YV9/YV10 宏存在数组索引 bug (翻转操作使用 `can_can_send_data[0]` 而非正确索引)，当前未使用 YV9/YV10，不影响功能
 - USART3 共享总线: 当前只有传感器帧发送随系统运行；若启用 IMU DMA 接收，发送期间可能丢 IMU 帧
-- `arm_task` 为旧代码残留骨架，需按双机械臂重写
-- 抬升实际高度回传为假数据 (lift_front_actual/lift_back_actual = target)，需从编码器读取
+- `arm_task` 为旧单机械臂代码残留骨架，需按双机械臂重写 (左右臂需各自独立 IK)
+- 抬升实际高度回传为假数据 (`lift_front_actual`/`lift_back_actual` = target)，需从编码器读取
+
+---
+
+## 相关链接
+
+| 资源 | 链接 |
+|------|------|
+| 仓库 | [Gitee — alexiaqaq/robocon2026](https://gitee.com/alexiaqaq/robocon2026) |
+| 串口协议 | [rc26_vehicle_serial_protocol_final.md](rc26_vehicle_serial_protocol_final.md) |
+| 英文文档 | [README.en.md](README.en.md) |
+
+> ⚠️ 本 README 为手动维护，部分过时信息以代码实际状态为准。最新变更摘要见 `memory_box_short.md`，详细上下文见 `memory_box_long.md`。

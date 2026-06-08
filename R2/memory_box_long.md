@@ -15,7 +15,7 @@ type: project
 - **控制方式**: SBUS 遥控器直连 (手动模式) / 上位机串口指令 (自动模式)
 - **IDE**: Keil MDK-ARM
 - **工程文件**: `MDK-ARM/A_board.uvprojx`
-- **工作目录**: `d:\01_Research_Projects\Projects\competitions\robocon\robocon2026\R2_M\R2_0606\`
+- **工作目录**: `d:\Code\RC2026\R2\`
 
 ## 2. 硬件架构关键信息 (当前，2026-06-06)
 
@@ -187,7 +187,7 @@ type: project
 ## 6. 当前工程文件结构 (2026-06-06)
 
 ```
-R2_0606/
+R2/
 ├── Core/Src/main.c              # 主程序 (含待重构的 chassis_task/up_cs_task)
 ├── Lib/
 │   ├── uart_task.c/h            # 串口任务库 (+传感器帧发送)
