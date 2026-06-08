@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//d/01_Research_Projects/Projects/competitions/robocon/robocon2026/R2_M/202604026/Lib/**)",
+      "Read(//d/01_Research_Projects/Projects/competitions/robocon/robocon2026/R2_M/20260501/**)",
+      "Bash(ls -la ..)",
+      "Read(//d/01_Research_Projects/Projects/competitions/robocon/robocon2026/R2_M/20260507/**)",
+      "Read(//d/01_Research_Projects/Projects/competitions/robocon/robocon2026/R2_M/20260507_2/**)"
+    ],
+    "additionalDirectories": [
+      "d:\\01_Research_Projects\\Projects\\competitions\\robocon\\robocon2026\\R2_M\\202604026\\Core\\Src",
+      "d:\\01_Research_Projects\\Projects\\competitions\\robocon\\robocon2026\\R2_M\\202604026",
+      "d:\\01_Research_Projects\\Projects\\competitions\\robocon\\robocon2026\\R2_M\\20260501",
+      "d:\\01_Research_Projects\\Projects\\competitions\\robocon\\robocon2026\\R2_M\\20260507\\Lib",
+      "d:\\01_Research_Projects\\Projects\\competitions\\robocon\\robocon2026\\R2_M\\20260507\\Core\\Src"
+    ]
+  }
+}

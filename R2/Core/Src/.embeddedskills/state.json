@@ -1,0 +1,24 @@
+{
+  "last_build": {
+    "provider": "keil",
+    "action": "build",
+    "project": "../../MDK-ARM/A_board.uvprojx",
+    "target": "A_board",
+    "log_dir": "../../MDK-ARM/.build",
+    "artifacts": {
+      "axf_file": "../../MDK-ARM/A_board/A_board.axf",
+      "hex_file": "../../MDK-ARM/A_board/A_board.hex",
+      "flash_file": "../../MDK-ARM/A_board/A_board.hex",
+      "debug_file": "../../MDK-ARM/A_board/A_board.axf",
+      "output_dir": "../../MDK-ARM/A_board",
+      "log_file": "../../MDK-ARM/.build/A_board-A_board-build.log"
+    },
+    "axf_file": "../../MDK-ARM/A_board/A_board.axf",
+    "hex_file": "../../MDK-ARM/A_board/A_board.hex",
+    "flash_file": "../../MDK-ARM/A_board/A_board.hex",
+    "debug_file": "../../MDK-ARM/A_board/A_board.axf",
+    "output_dir": "../../MDK-ARM/A_board",
+    "log_file": "../../MDK-ARM/.build/A_board-A_board-build.log",
+    "timestamp": "2026-06-08T14:28:57+08:00"
+  }
+}
