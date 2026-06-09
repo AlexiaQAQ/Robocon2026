@@ -97,6 +97,8 @@ virtualFolder:
         - path: ../Lib/chassis.h
         - path: ../Lib/solenoid_valves.c
         - path: ../Lib/solenoid_valves.h
+        - path: ../Lib/arm.c
+        - path: ../Lib/arm.h
       folders: []
     - name: ::CMSIS
       files: []
