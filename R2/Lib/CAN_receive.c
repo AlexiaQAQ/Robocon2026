@@ -34,7 +34,8 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 				break;
 			}	
 	}
-	//can1_rx_callback(rx_data);
+		//can1_rx_callback(rx_data);
+		dm_rx_cbk(dm_motor, rx_data);  // DM 电机反馈 (ID 1~8)
 }
 
 

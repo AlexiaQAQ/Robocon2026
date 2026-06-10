@@ -80,6 +80,9 @@ static uint32_t last_sbus_tick = 0;
 bool sys_enabled = false;
 static bool last_ch4 = false;
 
+/* 夹爪翻转电机 (hcan3 MCP2515, POS 模式, ID 0x01) */
+static motor_t gripper_flip_motor;
+
 /* Gripper flip motor position: 0=竖起来, 1.57=翻下去 */
 float gripper_flip_pos = 0.0f;
 bool gripper_flip_ready = false;   // 首次CH7操作后置true, 防止上电夹人
@@ -127,7 +130,7 @@ static void system_enable_handler(void)
 		chassis_enable(&hcan1);               // CAN1: 全向轮×4 + 抬升×4
 		arm_left_enable(&hcan2);                // CAN2: 左臂 ID 1-3
 		arm_right_enable(&hcan2);               // CAN2: 右臂 ID 4-6
-		dm_enable_mcp2515(&hcan3, 0x01);   // hcan3: 夹爪翻转电机
+		dm_enable_mcp2515(&hcan3, &gripper_flip_motor);   // hcan3: 夹爪翻转电机
 	}
 	else if (!ch4 && last_ch4)
 	{
@@ -136,7 +139,7 @@ static void system_enable_handler(void)
 		chassis_disable(&hcan1);              // CAN1: 全向轮×4 + 抬升×4
 		arm_left_disable(&hcan2);               // CAN2: 左臂 ID 1-3
 		arm_right_disable(&hcan2);              // CAN2: 右臂 ID 4-6
-		dm_disable_mcp2515(&hcan3, 0x01);  // hcan3: 夹爪翻转电机
+		dm_disable_mcp2515(&hcan3, &gripper_flip_motor);  // hcan3: 夹爪翻转电机
 		set_vx = 0;
 		set_vy = 0;
 		set_vw = 0;
@@ -191,7 +194,7 @@ void sbus_task(void *parameter)
 			set_vy = (ch_val >= 1017 && ch_val <= 1030) ? 0 : Map(ch_val, 240, 1780, -10000, 10000);
 
 			ch_val = sbus_ch.ch[0];
-			set_vw = (ch_val >= 1020 && ch_val <= 1028) ? 0 : Map(ch_val, 268, 1783, -30000, 30000);
+			set_vw = (ch_val >= 1020 && ch_val <= 1028) ? 0 : Map(ch_val, 268, 1783, -20000, 20000);
 
 			/* TODO: CH8/CH9 gripper control (old YV3/YV4/YV5 removed) */
 		}
@@ -314,7 +317,7 @@ void up_cs_task(void *parameter)
 
 			/* 夹爪翻转电机 — 上电不动作, CH7首次操作后才开始控制 */
 			if (gripper_flip_ready)
-				pos_ctrl_mcp2515(&hcan3, 0x01, gripper_flip_pos, flip_vel);
+				dm_pos_ctrl_mcp2515(&hcan3, 0x01, gripper_flip_pos, flip_vel);
 			YV_flash_mcp2515(&hcan3);   // 电磁阀状态刷新 (每周期)
 		}
 
@@ -376,6 +379,8 @@ void start_task(void *parameter)
 		can_filter_init();
 		uart_rx_init();
 		chassis_init(&hcan1);
+			arm_init();    // 注册 6 个 DM_4340 机械臂电机
+			dm_init(&gripper_flip_motor, 0x01, DM_MODE_POS, DM_4310);  // 夹爪翻转
 
 		mcp2515_sys_init(&hcan3, &hspi1, GPIOA, GPIO_PIN_4);//电磁阀和翻转电机
 

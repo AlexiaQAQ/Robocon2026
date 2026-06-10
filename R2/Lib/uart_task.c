@@ -1,4 +1,5 @@
 #include "uart_task.h"
+#include "arm.h"
 #include <string.h>
 
 /* ==================== DMA 接收缓冲区 ==================== */
@@ -53,20 +54,30 @@ static void build_status_frame(void)
     stat_buf[7]  = 0xFF; stat_buf[8]  = 0xFF;  // tof_front_back
     stat_buf[9]  = 0xFF; stat_buf[10] = 0xFF;  // tof_back_front
     stat_buf[11] = 0xFF; stat_buf[12] = 0xFF;  // tof_back_back
-    // 左臂角度 (mrad, big-endian, 回传当前目标值 → TODO: 从编码器读取实际值)
-    stat_buf[13] = (uint8_t)(left_pitch1 >> 8);
-    stat_buf[14] = (uint8_t)(left_pitch1 & 0xFF);
-    stat_buf[15] = (uint8_t)(left_pitch2 >> 8);
-    stat_buf[16] = (uint8_t)(left_pitch2 & 0xFF);
-    stat_buf[17] = (uint8_t)(left_pitch3 >> 8);
-    stat_buf[18] = (uint8_t)(left_pitch3 & 0xFF);
-    // 右臂角度 (mrad, 待实现 → 填 0)
-    stat_buf[19] = (uint8_t)(right_pitch1 >> 8);
-    stat_buf[20] = (uint8_t)(right_pitch1 & 0xFF);
-    stat_buf[21] = (uint8_t)(right_pitch2 >> 8);
-    stat_buf[22] = (uint8_t)(right_pitch2 & 0xFF);
-    stat_buf[23] = (uint8_t)(right_pitch3 >> 8);
-    stat_buf[24] = (uint8_t)(right_pitch3 & 0xFF);
+    /* 左臂当前角度 (mrad, 从 CAN2 反馈读取, 方向已适配协议正=上) */
+    {
+        int16_t lp1 = (int16_t)( arm_left_motor[0].para.pos * 1000.0f);
+        int16_t lp2 = (int16_t)(-arm_left_motor[1].para.pos * 1000.0f);  // ID2电机上=负,取反
+        int16_t lp3 = (int16_t)( arm_left_motor[2].para.pos * 1000.0f);
+        stat_buf[13] = (uint8_t)(lp1 >> 8);
+        stat_buf[14] = (uint8_t)(lp1 & 0xFF);
+        stat_buf[15] = (uint8_t)(lp2 >> 8);
+        stat_buf[16] = (uint8_t)(lp2 & 0xFF);
+        stat_buf[17] = (uint8_t)(lp3 >> 8);
+        stat_buf[18] = (uint8_t)(lp3 & 0xFF);
+    }
+    /* 右臂当前角度 (mrad, 从 CAN2 反馈读取, ID4/6 取反) */
+    {
+        int16_t rp1 = (int16_t)(-arm_right_motor[0].para.pos * 1000.0f);  // ID4取反
+        int16_t rp2 = (int16_t)( arm_right_motor[1].para.pos * 1000.0f);
+        int16_t rp3 = (int16_t)(-arm_right_motor[2].para.pos * 1000.0f);  // ID6取反
+        stat_buf[19] = (uint8_t)(rp1 >> 8);
+        stat_buf[20] = (uint8_t)(rp1 & 0xFF);
+        stat_buf[21] = (uint8_t)(rp2 >> 8);
+        stat_buf[22] = (uint8_t)(rp2 & 0xFF);
+        stat_buf[23] = (uint8_t)(rp3 >> 8);
+        stat_buf[24] = (uint8_t)(rp3 & 0xFF);
+    }
     stat_buf[25] = 0;    // reserved
     stat_buf[26] = 0xEE;
 }

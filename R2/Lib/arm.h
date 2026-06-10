@@ -69,6 +69,13 @@ extern motor_t arm_right_motor[3];
 /* ==================== API ==================== */
 
 /**
+ * @brief 双机械臂初始化 — dm_init 注册电机型号
+ *        左臂: DM_4340 POS 模式, ID 1/2/3
+ *        右臂: DM_4340 POS 模式, ID 4/5/6
+ */
+void arm_init(void);
+
+/**
  * @brief 左臂使能 (CAN2: dm_enable ×3, 每个间隔 5ms)
  */
 void arm_left_enable(CAN_HandleTypeDef *hcan);
