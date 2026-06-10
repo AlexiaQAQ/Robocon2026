@@ -208,9 +208,8 @@ DM_MODE_PSI  // 位速流模式
 
 | 资源 | 链接 |
 |------|------|
-| 仓库 | [Gitee — alexiaqaq/robocon2026](https://gitee.com/alexiaqaq/robocon2026) |
 | R2 主控 | [../R2/](../R2/) |
-| 中英文档 | [README.en.md](README.en.md) |
+| 英文文档 | [README.en.md](README.en.md) |
 | 短记忆匣 | [memory_box_short.md](memory_box_short.md) |
 | 长记忆匣 | [memory_box_long.md](memory_box_long.md) |
 

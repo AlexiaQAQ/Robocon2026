@@ -1,6 +1,5 @@
 # Robocon 2026 — R2 Main Control Firmware (Board A)
 
-[![Gitee](https://img.shields.io/badge/Gitee-robocon2026-C71D23?logo=gitee)](https://gitee.com/alexiaqaq/robocon2026)
 [![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
 [![IDE](https://img.shields.io/badge/IDE-Keil%20MDK-009F4D)](https://www.keil.com/)
@@ -259,7 +258,6 @@ Header  Rear   Front  0x00   0x00   0x00   0x00   Tail
 
 | Resource | Link |
 |----------|------|
-| Repository | [Gitee — alexiaqaq/robocon2026](https://gitee.com/alexiaqaq/robocon2026) |
 | Serial Protocol | [rc26_vehicle_serial_protocol_final.md](rc26_vehicle_serial_protocol_final.md) |
 | Chinese Docs | [README.md](README.md) |
 

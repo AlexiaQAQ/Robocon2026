@@ -121,7 +121,6 @@ Control modes: MIT, Position-Velocity, Speed, Position-Speed-Current (PSI).
 
 | Resource | Link |
 |----------|------|
-| Repository | [Gitee — alexiaqaq/robocon2026](https://gitee.com/alexiaqaq/robocon2026) |
 | R2 Controller | [../R2/](../R2/) |
 | Short memory box | [memory_box_short.md](memory_box_short.md) |
 | Long memory box | [memory_box_long.md](memory_box_long.md) |

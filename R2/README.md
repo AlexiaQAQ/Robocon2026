@@ -1,6 +1,5 @@
 # Robocon 2026 — R2主控固件 (A板)
 
-[![Gitee](https://img.shields.io/badge/Gitee-robocon2026-C71D23?logo=gitee)](https://gitee.com/alexiaqaq/robocon2026)
 [![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
 [![IDE](https://img.shields.io/badge/IDE-Keil%20MDK-009F4D)](https://www.keil.com/)
@@ -259,7 +258,6 @@ CH4 (主使能, 阈值1700)
 
 | 资源 | 链接 |
 |------|------|
-| 仓库 | [Gitee — alexiaqaq/robocon2026](https://gitee.com/alexiaqaq/robocon2026) |
 | 串口协议 | [rc26_vehicle_serial_protocol_final.md](rc26_vehicle_serial_protocol_final.md) |
 | 英文文档 | [README.en.md](README.en.md) |
 
