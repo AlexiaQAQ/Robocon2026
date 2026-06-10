@@ -150,13 +150,13 @@ void remote_task(void *parameter)
 			int16_t ch_val;
 
 			ch_val = sbus_ch.ch[2];
-			set_vx = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -10000, 10000);
+			set_vx = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -1000, 1000);
 
 			ch_val = sbus_ch.ch[3];
-			set_vy = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -10000, 10000);
+			set_vy = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -1000, 1000);
 
 			ch_val = sbus_ch.ch[0];
-			set_vw = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -25000, 25000);
+			set_vw = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -2500, 2500);
 
 		}
 		
@@ -177,6 +177,8 @@ void chassis_task(void *parameter)
 	while(1)
 	{
 		chassis_update();
+		
+		vTaskDelay(1);
 	}
 }
 

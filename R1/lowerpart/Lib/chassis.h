@@ -30,7 +30,7 @@
 #define CHASSIS_R        0.245f            // 轮心到几何中心距离 (m)
 #define WHEEL_RADIUS     0.064f            // 全向轮半径 (m), 直径 127mm
 #define COS45            0.70710678118f    // cos(45°)
-#define SPEED_SCALE      0.00001f           // 速度缩放 (配合 set_vx/set_vy/set_vw 的 ±1000 范围)
+#define SPEED_SCALE      0.0001f           // 速度缩放 (配合 set_vx/set_vy/set_vw 的 ±1000 范围)
 #define CHASSIS_TORQUE   2.0f              // MIT 模式阻尼系数
 
 /* ---- 外部速度变量 (定义在 main.c) ---- */

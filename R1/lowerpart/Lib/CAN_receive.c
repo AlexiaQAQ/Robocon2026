@@ -1,4 +1,4 @@
-#include "CAN_receive.h" 
+#include "CAN_receive.h"
 
 motor_measure_t      motor_chassis[4],can2_motor_chassis[4];
 
@@ -14,10 +14,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
     CAN_RxHeaderTypeDef rx_header;
     uint8_t rx_data[8];
-			
+
 	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
 
-	//dm_rx_cbk(dm_motor, rx_data);
+	dm_rx_cbk(dm_motor, rx_data);
 }
 
 
@@ -27,9 +27,9 @@ void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
     CAN_RxHeaderTypeDef rx_header;
     uint8_t rx_data[8];
-				
+
 	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO1, &rx_header, rx_data);
-    
+
 	//dm_rx_cbk(&dm_motor[4], rx_data);
 }
 
@@ -53,7 +53,7 @@ void CAN1_send_dat(int16_t canid,int16_t motor1,int16_t motor2,int16_t motor3,in
     can1_can_send_data[5] = motor3;
     can1_can_send_data[6] = motor4 >> 8;
     can1_can_send_data[7] = motor4;
-		
+
 	HAL_CAN_AddTxMessage(&hcan1, &can1_tx_message, can1_can_send_data, &send_mail_box);
 }
 
@@ -96,7 +96,6 @@ void CAN2_send_dat(uint16_t canid,int16_t motor1,int16_t motor2,int16_t motor3,i
     can2_can_send_data[5] = motor3;
     can2_can_send_data[6] = motor4 >> 8;
     can2_can_send_data[7] = motor4;
-		
+
 	HAL_CAN_AddTxMessage(&hcan2, &can2_tx_message, can2_can_send_data, &send_mail_box);
 }
-
