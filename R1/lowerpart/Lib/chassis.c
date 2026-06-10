@@ -74,11 +74,11 @@ void chassis_update(void)
     // BL: 45° 左后安装, 投影到 X/Y 分量为 -cos45/+cos45
     motor_out[3] = (-COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;
 
-    // 逐个发送 MIT 指令, 间隔 1ms 防止 CAN 拥塞
+    // MIT + kp=0 速度控制: kd 提供阻尼, 比纯 SPD 模式平顺
     for (int i = 0; i < 4; i++)
     {
         dm_mit_ctrl(&hcan1, &dm_motor[i],
-                     0.0f,            // pos = 0 (速度模式)
+                     0.0f,            // pos = 0
                      motor_out[i],    // vel = 目标角速度 (rad/s)
                      0.0f,            // kp = 0
                      CHASSIS_TORQUE,  // kd = 阻尼
