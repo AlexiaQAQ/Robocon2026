@@ -33,6 +33,7 @@
 #include "bsp_can.h"
 #include "sbus_set.h"
 #include "motor_control.h"
+#include "chassis.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,10 +110,12 @@ static void system_enable_handler(void)
 	if (ch4 && !last_ch4)
 	{
 		sys_enabled = true;
+		chassis_enable();
 	}
 	else if (!ch4 && last_ch4)
 	{
 		sys_enabled = false;
+		chassis_disable();
 	}
 	
 	last_ch4 = ch4;
@@ -147,13 +150,13 @@ void remote_task(void *parameter)
 			int16_t ch_val;
 
 			ch_val = sbus_ch.ch[2];
-			set_vx = -(ch_val >= 991 && ch_val <= 993) ? 0 : Map(ch_val, 326, 1659, -1000, 1000);
+			set_vx = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -10000, 10000);
 
 			ch_val = sbus_ch.ch[3];
-			set_vy = -(ch_val >= 991 && ch_val <= 993) ? 0 : Map(ch_val, 326, 1659, -1000, 1000);
+			set_vy = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -10000, 10000);
 
 			ch_val = sbus_ch.ch[0];
-			set_vw = -(ch_val >= 991 && ch_val <= 993) ? 0 : Map(ch_val, 326, 1659, -1000, 1000);
+			set_vw = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -25000, 25000);
 
 		}
 		
@@ -173,12 +176,7 @@ void chassis_task(void *parameter)
 {
 	while(1)
 	{
-		if (sys_enabled)
-		{
-      
-		}
-		
-		vTaskDelay(2);
+		chassis_update();
 	}
 }
 
@@ -194,9 +192,11 @@ void start_task(void *parameter)
 		
 		can_filter_init();
 		sbus_rx_init();
+		chassis_init();
 	
 		xTaskCreate(led_task,"led_task",128,NULL,0,NULL);
-		xTaskCreate(remote_task,"remote_task",128,NULL,0,NULL);
+		xTaskCreate(remote_task,"remote_task",512,NULL,0,NULL);
+		xTaskCreate(chassis_task,"chassis_task",512,NULL,0,NULL);
 		
 		vTaskDelete(NULL);
 	}

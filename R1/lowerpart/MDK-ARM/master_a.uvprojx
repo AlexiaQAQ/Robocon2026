@@ -869,6 +869,16 @@
               <FileType>5</FileType>
               <FilePath>..\Lib\pid.h</FilePath>
             </File>
+            <File>
+              <FileName>chassis.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Lib\chassis.c</FilePath>
+            </File>
+            <File>
+              <FileName>chassis.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Lib\chassis.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
