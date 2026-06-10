@@ -1,0 +1,17 @@
+# ============================================
+# R1 底盘车 — 项目级 .gitignore
+# 全局规则已在 ../../.gitignore 中定义
+# 此处仅补充 R1 特有规则
+# ============================================
+
+# Keil MDK 构建输出目录
+MDK-ARM/RTE/
+MDK-ARM/DebugConfig/
+MDK-ARM/[Listings](
+MDK-ARM/[Objects](
+
+# CubeMX 生成 (保留 .ioc)
+.mxproject
+
+# 日志文件
+*.log

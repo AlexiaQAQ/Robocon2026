@@ -1,22 +1,96 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# ============================================
+# Robocon 2026 — 全局 .gitignore
+# 覆盖 R1、R2 及根目录所有通用忽略规则
+# ============================================
 
-# Other files and folders
-.settings/
+# ============================================
+# Claude Code & AI tooling (local only)
+# ============================================
+.claude/
+**/.claude/
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
+# ============================================
+# EmbeddedSkills tool state (local only)
+# ============================================
+**/.embeddedskills/
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
-R2/MDK-ARM/A_board/A_board.sct
-R2/MDK-ARM/.vscode/keil-assistant.log
-R2/MDK-ARM/.vscode/uv4.log
-R2/MDK-ARM/.vscode/uv4.log.lock
+# ============================================
+# VSCode — 保留共享配置, 排除日志和用户本地文件
+# ============================================
+.vscode/*.log
+.vscode/*.log.lock
+.vscode/settings.json
+
+# ============================================
+# Keil MDK — 用户本地 & 构建产物
+# ============================================
+# 用户本地文件 (编辑器布局、调试设置)
+*.uvoptx
+*.uvguix.*
+*.Administrator
+*.uvgui.*
+*.scvd
+
+# 构建产物
+*.hex
+*.bin
+*.axf
+*.elf
+*.o
+*.d
+*.crf
+*.dep
+*.iex
+*.htm
+*.lnp
+*.plg
+*.map
+*.fed
+*.lst
+*.build_log.htm
+
+# 调试配置 (IDE 自动生成)
+JLinkSettings.ini
+DebugConfig/
+
+# RTE 目录
+RTE/
+
+# 构建目录
+.build/
+build/
+*/build/
+**/build/
+[Listings](
+[Objects](
+
+# ============================================
+# STM32CubeMX — 只保留 .ioc
+# ============================================
+.mxproject
+
+# ============================================
+# CMake / GCC 构建产物 (如果后续迁移构建系统)
+# ============================================
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# ============================================
+# 临时文件 & OS 垃圾
+# ============================================
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+*.orig
+
+# ============================================
+# 测试文件 (根目录)
+# ============================================
+test.txt
