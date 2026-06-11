@@ -18,12 +18,18 @@
 
 /* ---- 电机型号 ---- */
 typedef enum {
-    DM_4310,        /* 额定~5Nm,  峰值10Nm,  24V空载~286rpm  PMAX=12.5 VMAX=30 TMAX=10 */
-    DM_4310_48V,    /* 同上48V供电,             峰值18Nm         VMAX=45 TMAX=18 */
-    DM_4340,        /* 额定~9Nm,  峰值27Nm,  24V空载~    rpm  PMAX=12.5 VMAX=30 TMAX=27 */
-    DM_3519,        /* 额定3.5Nm, 峰值~8Nm,  19:1减速  空载~435rpm(电机侧) PMAX=12.5 VMAX=20 TMAX=8 */
-    DM_8006,        /* 额定8Nm,   峰值20Nm,  6:1减速   24V空载~194rpm PMAX=12.5 VMAX=21 TMAX=20 */
-    DM_8009,        /* 额定20Nm,  峰值40Nm,  9:1减速   24V空载~168rpm PMAX=12.5 VMAX=18 TMAX=40 */
+    DM_4310,
+    DM_4310_48V,
+    DM_4340,
+	DM_4340_48V,
+    DM_3519,
+    DM_8006,
+    DM_8009,
+	DM_10010L,
+	DM_10010,
+	DMH3510,
+	DMH6215,
+	DMG6220,
     DM_CUSTOM       /* 用户自行设置范围, 默认同 DM_4310 */
 } dm_model_t;
 
