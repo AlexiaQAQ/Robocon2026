@@ -88,6 +88,8 @@ virtualFolder:
         - path: ../Lib/sbus_set.h
         - path: ../Lib/pid.c
         - path: ../Lib/pid.h
+        - path: ../Lib/chassis.c
+        - path: ../Lib/chassis.h
       folders: []
     - name: App
       files: []
