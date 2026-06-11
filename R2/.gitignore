@@ -14,7 +14,6 @@
 # ============================================
 .vscode/*.log
 .vscode/*.log.lock
-*.code-workspace
 # Allow only these shared configs:
 # .vscode/c_cpp_properties.json
 # .vscode/settings.json
