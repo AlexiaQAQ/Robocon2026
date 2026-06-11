@@ -15,16 +15,14 @@
 **/.embeddedskills/
 
 # ============================================
-# VSCode — 保留共享配置, 排除日志和用户本地文件
+# VSCode — 保留共享配置, 全局排除日志
 # ============================================
-.vscode/*.log
-.vscode/*.log.lock
-.vscode/settings.json
+**/.vscode/*.log
+**/.vscode/*.log.lock
 
 # ============================================
 # Keil MDK — 用户本地 & 构建产物
 # ============================================
-# 用户本地文件 (编辑器布局、调试设置)
 *.uvoptx
 *.uvguix.*
 *.Administrator
@@ -61,8 +59,9 @@ RTE/
 build/
 */build/
 **/build/
-[Listings](
-[Objects](
+# Keil 输出目录 (Listings/Objects)
+Listings/
+Objects/
 
 # ============================================
 # STM32CubeMX — 只保留 .ioc
