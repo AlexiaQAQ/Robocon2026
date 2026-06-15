@@ -14,9 +14,9 @@ RC2026/
 
 | Project | Board | MCU | IDE |
 |---------|-------|-----|-----|
-| R1 Chassis | Robomaster Board A | STM32F427IIHx | Keil MDK |
-| R1 Upper | Custom Board A | STM32F407VETx | Keil MDK |
-| R2 | Custom Board A | STM32F407VETx | Keil MDK |
+| R1 Chassis | Robomaster Board A | STM32F427IIHx | VSCode + EIDE / Keil MDK |
+| R1 Upper | Custom Board A | STM32F407VETx | VSCode + EIDE / Keil MDK |
+| R2 | Custom Board A | STM32F407VETx | VSCode + EIDE / Keil MDK |
 
 ## Build
 

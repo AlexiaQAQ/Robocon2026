@@ -14,9 +14,9 @@ RC2026/
 
 | 项目 | 板型 | MCU | IDE |
 |------|------|-----|-----|
-| R1 底盘 | Robomaster A 板 | STM32F427IIHx | Keil MDK |
-| R1 上层 | 自制 A 板 | STM32F407VETx | Keil MDK |
-| R2 | 自制 A 板 | STM32F407VETx | Keil MDK |
+| R1 底盘 | Robomaster A 板 | STM32F427IIHx | VSCode + EIDE / Keil MDK |
+| R1 上层 | 自制 A 板 | STM32F407VETx | VSCode + EIDE / Keil MDK |
+| R2 | 自制 A 板 | STM32F407VETx | VSCode + EIDE / Keil MDK |
 
 ## 构建
 
