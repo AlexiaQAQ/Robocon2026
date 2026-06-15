@@ -38,12 +38,12 @@
 /* ---- 底盘物理参数 ---- */
 #define CHASSIS_R        0.245f            // 轮心到几何中心距离 (m)
 #define WHEEL_RADIUS     0.064f            // 全向轮半径 (m), 直径 127mm
-#define CHASSIS_TORQUE   3.0f              // MIT 模式阻尼系数
+#define CHASSIS_TORQUE   4.0f              // MIT 阻尼 (kd), 越大越"硬"
 #define COS45            0.70710678118f
-#define SPEED_SCALE      0.00001f           // 速度缩放
+#define SPEED_SCALE      0.0001f           // ±10000 → ±1 m/s
 
 /* 齿条: 电机弧度 → 线性行程 (mm) */
-#define RACK_MM_PER_RAD  20.0f             // 417mm / 20.85rad
+#define RACK_MM_PER_RAD  20.5f             // 417mm / 20.85rad
 
 /* 抬升位置模式速度 (rad/s) */
 #define LIFT_VEL_SLOW    2.5f

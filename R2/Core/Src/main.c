@@ -188,13 +188,13 @@ void sbus_task(void *parameter)
 			int16_t ch_val;
 
 			ch_val = sbus_ch.ch[2];
-			set_vx = (ch_val >= 1017 && ch_val <= 1030) ? 0 : Map(ch_val, 256, 1800, -10000, 10000);
+			set_vx = (ch_val >= 1017 && ch_val <= 1030) ? 0 : Map(ch_val, 256, 1800, -1000, 1000);
 
 			ch_val = sbus_ch.ch[3];
-			set_vy = (ch_val >= 1017 && ch_val <= 1030) ? 0 : Map(ch_val, 240, 1780, -10000, 10000);
+			set_vy = (ch_val >= 1017 && ch_val <= 1030) ? 0 : Map(ch_val, 240, 1780, -1000, 1000);
 
 			ch_val = sbus_ch.ch[0];
-			set_vw = (ch_val >= 1020 && ch_val <= 1028) ? 0 : Map(ch_val, 268, 1783, -20000, 20000);
+			set_vw = (ch_val >= 1020 && ch_val <= 1028) ? 0 : Map(ch_val, 268, 1783, -2000, 2000);
 
 			/* TODO: CH8/CH9 gripper control (old YV3/YV4/YV5 removed) */
 		}
@@ -366,8 +366,10 @@ void chassis_task(void *parameter)
 		{
 			chassis_update(&hcan1);   // 全向轮运动学 + CAN1 MIT 驱动
 		}
-
-		vTaskDelay(2);
+		else
+		{
+			vTaskDelay(2);
+		}
 	}
 }
 
@@ -379,17 +381,18 @@ void start_task(void *parameter)
 		can_filter_init();
 		uart_rx_init();
 		chassis_init(&hcan1);
-			arm_init();    // 注册 6 个 DM_4340 机械臂电机
-			dm_init(&gripper_flip_motor, 0x01, DM_MODE_POS, DM_4310);  // 夹爪翻转
+		arm_init();    // 注册 6 个 DM_4340 机械臂电机
+		dm_init(&gripper_flip_motor, 0x01, DM_MODE_POS, DM_4310);  // 夹爪翻转
 
 		mcp2515_sys_init(&hcan3, &hspi1, GPIOA, GPIO_PIN_4);//电磁阀和翻转电机
 
-		xTaskCreate(led_task, "led_task", 56, NULL, 0, NULL);
-		xTaskCreate(sbus_task, "remote_task", 256, NULL, 0, NULL);
-		xTaskCreate(uart_task, "uart_task", 512, NULL, 0, NULL);
-		xTaskCreate(chassis_task, "chassis_task", 1280, NULL, 0, NULL);
-		xTaskCreate(up_cs_task, "up_cs_task", 256, NULL, 0, NULL);
-		xTaskCreate(arm_task, "arm_task", 512, NULL, 0, NULL);
+			/* prio: chassis(3) > sbus(2) > arm/up_cs(1) > uart/led(0) */
+			xTaskCreate(led_task,     "led_task",      56, NULL, 2, NULL);
+			xTaskCreate(sbus_task,    "remote_task",  256, NULL, 1, NULL);
+			xTaskCreate(uart_task,    "uart_task",    1024, NULL, 0, NULL);
+			xTaskCreate(chassis_task, "chassis_task", 512, NULL, 0, NULL);
+			xTaskCreate(up_cs_task,   "up_cs_task",   512, NULL, 0, NULL);
+			xTaskCreate(arm_task,     "arm_task",     512, NULL, 0, NULL);
 
 		vTaskDelete(NULL);
 	}

@@ -77,10 +77,12 @@ void chassis_update(CAN_HandleTypeDef *hcan)
     motor_out[2] = ( COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;  // FL
     motor_out[3] = (-COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;  // BL
 
+    /* 发送顺序: BR(1)→FR(2)→BL(4)→FL(3) */
+    static const uint8_t order[4] = {0, 1, 3, 2};
     for (int i = 0; i < 4; i++)
     {
-        dm_mit_ctrl(hcan, &dm_motor[i],
-                     0.0f, motor_out[i], 0.0f, CHASSIS_TORQUE, 0.0f);
+        uint8_t idx = order[i];
+        dm_mit_ctrl(hcan, &dm_motor[idx], 0.0f, motor_out[idx], 0.0f, CHASSIS_TORQUE, 0.0f);
         vTaskDelay(1);
     }
 }
