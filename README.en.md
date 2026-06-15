@@ -1,36 +1,27 @@
-# Robocon2026
+# Robocon 2026
 
-#### Description
-主赛的R1和R2代码
+National Robocon 2026 competition — main control firmware.
 
-#### Software Architecture
-Software architecture description
+## Structure
 
-#### Installation
+```
+RC2026/
+├── R1/                  # First validation robot
+│   ├── lowerpart/       # Chassis controller (Robomaster Board A, STM32F427)
+│   └── upperpart/       # Upper controller (Custom Board A, STM32F407)
+└── R2/                  # Second robot (Custom Board A, STM32F407)
+```
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+| Project | Board | MCU | IDE |
+|---------|-------|-----|-----|
+| R1 Chassis | Robomaster Board A | STM32F427IIHx | Keil MDK |
+| R1 Upper | Custom Board A | STM32F407VETx | Keil MDK |
+| R2 | Custom Board A | STM32F407VETx | Keil MDK |
 
-#### Instructions
+## Build
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+Each subproject builds independently. See their respective `README.md`.
 
-#### Contribution
+## License
 
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
-
-
-#### Gitee Feature
-
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+MIT License
