@@ -40,7 +40,7 @@
 #define WHEEL_RADIUS     0.064f            // 全向轮半径 (m), 直径 127mm
 #define CHASSIS_TORQUE   4.0f              // MIT 阻尼 (kd), 越大越"硬"
 #define COS45            0.70710678118f
-#define SPEED_SCALE      0.0001f           // ±10000 → ±1 m/s
+#define SPEED_SCALE      0.00001f          // 已标定, 勿改 (上位机适配)
 
 /* 齿条: 电机弧度 → 线性行程 (mm) */
 #define RACK_MM_PER_RAD  20.5f             // 417mm / 20.85rad
