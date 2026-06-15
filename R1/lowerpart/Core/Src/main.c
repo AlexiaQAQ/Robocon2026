@@ -176,9 +176,14 @@ void chassis_task(void *parameter)
 {
 	while(1)
 	{
-		chassis_update();
-		
-		vTaskDelay(1);
+    if (sys_enabled)
+		{
+			chassis_update();
+		}
+		else
+		{
+			vTaskDelay(2);
+		}
 	}
 }
 

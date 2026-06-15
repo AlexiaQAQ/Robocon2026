@@ -15,7 +15,7 @@ Main control board firmware for the Robocon 2026 R2 robot, developed on **STM32F
 
 The robot features a **four-omni-wheel chassis + lifting mechanism + dual arm (left & right)** structure. The main controller handles low-level motor and solenoid valve control, operable via SBUS remote (manual mode) or host PC serial commands (automatic mode).
 
-> **2026-06-08 Gripper flip + cylinder serial port integration** | 2026-06-06 Major mechanical revision: four steering wheels → four omni wheels, lifting mechanism motor replacement, single arm → dual arm.
+> **2026-06-15 Dual arm serial control + CH6 3-stage logic + task priority tuning** | 2026-06-08 Gripper flip + cylinder serial integration | 2026-06-06 Mechanical redesign
 
 ---
 
@@ -29,10 +29,10 @@ The robot features a **four-omni-wheel chassis + lifting mechanism + dual arm (l
 | Peripheral | Pins | Function |
 |------------|------|----------|
 | CAN1 | PD0/PD1 | Chassis: 4× omni-wheel (DM MIT) + 4× independent lift (DM4310 pos-vel) |
-| CAN2 | PB5/PB6 | Left arm motors (DM series, position mode) |
+| CAN2 | PB5/PB6 | Dual arm DM4340 ×6 (position mode) |
 | SPI1 + PA4 (CS) | PA5/PA6/PA7 | MCP2515 → hcan3, gripper flip DM + solenoid YV1 |
 | SPI2 + PB12 (CS) | PB13/PB14/PB15 | MCP2515 → hcan4, reserved/unassigned |
-| SPI3 + PA15 (CS) | PB3/PB4/PB5 | MCP2515 → hcan5, lifting module DM motors (pos-vel mode) |
+| SPI3 + PA15 (CS) | PB3/PB4/PB5 | MCP2515 → hcan5, reserved/unassigned |
 | UART4 | PA0(TX)/PA1(RX) | SBUS receiver (100kbps, 9-bit, Even, 2-stop) |
 | USART1 | PA9(TX)/PA10(RX) | Host PC: chassis speed + valves + lift distance (115200-8N1) |
 | USART2 | PD5(TX)/PD6(RX) | Host PC: arm position commands (115200-8N1) |
@@ -51,9 +51,8 @@ The robot features a **four-omni-wheel chassis + lifting mechanism + dual arm (l
 |----------|-----|-----|-------------------|-------|
 | Omni-wheel motors | 4 | CAN1 (ID 1~4) | DM MIT mode | Four omni-wheel drive (chassis_update) |
 | Independent lift motors | 4 | CAN1 (ID 5~8) | DM4310 pos-vel mode | Rack lift, 4 independent heights (lift_update) |
-| Lifting module motors | 2 | hcan5 (MCP2515) | ⚠️ TBD | Front/rear module extension/retraction (pending) |
-| Left arm motors | 4 | CAN2 | DM series, position | Yaw/pitch/elbow/terminal (pending) |
-| Right arm motors | 4 | ⚠️ TBD | DM series, position | Yaw/pitch/elbow/terminal (pending) |
+| Left arm motors | 3 | CAN2 (ID 1~3) | DM4340 position mode | ✅ Root/mid/tip, serial connected |
+| Right arm motors | 3 | CAN2 (ID 4~6) | DM4340 position mode | ✅ Root/mid/tip, serial connected |
 | Gripper flip motor | 1 | hcan3 (MCP2515) | DM series, position | Flip: 0=upright, 1.57=folded, safe on boot |
 | Gripper cylinder | 1 | hcan3 (MCP2515) | Solenoid YV1 | CAN ID 0x300, 1=open, 0=close |
 
@@ -99,12 +98,12 @@ R2/
 | `start_task` | One-shot | 256 | 0 | Init peripherals & subsystems, spawn child tasks, self-delete |
 | `sbus_task` | 10ms | 256 | 0 | SBUS decode + RC speed mapping + mode switch + CH4 enable edge + CH5 falling notify |
 | `uart_task` | 100ms | 128 | 0 | Serial command parse (UART1 chassis/valve + UART2 arm) + USART3 sensor 5Hz |
-| `chassis_task` | ~2ms | 1280 | 0 | ✅ Omni-wheel kinematics + CAN1 MIT drive (chassis_update) |
-| `up_cs_task` | ~50ms | 256 | 0 | ✅ Independent lift position + gripper flip motor (lift_update) |
-| `arm_task` | 10ms | 512 | 0 | ⚠️ Dual arm control (pending rewrite) |
+| `chassis_task` | ~2ms | 512 | 3 | ✅ Omni-wheel kinematics + CAN1 MIT drive (chassis_update) |
+| `up_cs_task` | ~50ms | 512 | 1 | ✅ Independent lift + gripper flip + solenoid (lift_update) |
+| `arm_task` | 10ms | 512 | 1 | ✅ Dual arm DM4340 position control (arm_update) |
 | `led_task` | 200ms | 56 | 0 | GPIOE[0:7] LED chaser |
 
-> ⚠️ `arm_task` is a leftover skeleton from the old single-arm code; needs rewrite for dual arms. `imu_task()` module is implemented but not created in `main.c`.
+> `imu_task()` module is implemented but not created in `main.c`.
 
 ### Startup Sequence
 

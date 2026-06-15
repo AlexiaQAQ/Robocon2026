@@ -116,9 +116,9 @@ Control modes: MIT, Position-Velocity, Speed, Position-Speed-Current (PSI).
 | Motor control library | ✅ Complete | 7 DM models + YUN, 4 modes |
 | SBUS remote | ✅ Complete | DMA circular, frame check, timeout |
 | CAN filters | ✅ Complete | hcan1 + hcan2 |
-| Chassis kinematics | ❌ TODO | `chassis_task` is empty |
-| Motor enable flow | ❌ TODO | No `dm_enable()` in start_task |
-| Gimbal/weapon | ⚠️ Commented out | USART6 code exists in main.c |
+| CAN feedback | ✅ Complete | `dm_rx_cbk` dispatch verified |
+| Chassis kinematics | ✅ Complete | Migrated from R2 (omni/mecanum) |
+| Motor enable flow | ✅ Complete | `dm_enable()` added in start_task |
 
 ---
 
