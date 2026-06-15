@@ -23,15 +23,15 @@
 /* ---- 电机在 dm_motor[] 中的索引 (CAN ID 1~4) ---- */
 #define CHASSIS_MOTOR_BR  0   // 后右, CAN ID 1
 #define CHASSIS_MOTOR_FR  1   // 前右, CAN ID 2
-#define CHASSIS_MOTOR_FL  2   // 前左, CAN ID 3
-#define CHASSIS_MOTOR_BL  3   // 后左, CAN ID 4
+#define CHASSIS_MOTOR_BL  2   // 后左, CAN ID 4
+#define CHASSIS_MOTOR_FL  3   // 前左, CAN ID 3
 
 /* ---- 底盘物理参数 ---- */
-#define CHASSIS_R        0.245f            // 轮心到几何中心距离 (m)
+#define CHASSIS_R        0.346f            // 轮心到几何中心距离 (m), 底盘 489.28×489.28mm
 #define WHEEL_RADIUS     0.064f            // 全向轮半径 (m), 直径 127mm
 #define COS45            0.70710678118f    // cos(45°)
 #define SPEED_SCALE      0.0001f           // 速度缩放 (配合 set_vx/set_vy/set_vw 的 ±1000 范围)
-#define CHASSIS_TORQUE   3.0f              // MIT 模式阻尼系数
+#define CHASSIS_TORQUE   8.0f              // MIT 模式阻尼系数
 
 /* ---- 外部速度变量 (定义在 main.c) ---- */
 extern float set_vx;

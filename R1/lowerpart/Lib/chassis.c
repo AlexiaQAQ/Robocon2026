@@ -12,16 +12,16 @@
 #include "can.h"
 #include "cmsis_os.h"
 
-/* ---- 内部电机 ID 表 ---- */
-static const uint16_t wheel_id[4] = {1, 2, 3, 4};  // BR, FR, FL, BL
+/* ---- 内部电机 ID 表 (轮询顺序: BR, FR, BL, FL) ---- */
+static const uint16_t wheel_id[4] = {1, 2, 4, 3};
 
 /* ---- 初始化 ---- */
 void chassis_init(void)
 {
-    dm_init(&dm_motor[0], 1, DM_MODE_MIT, DM_4310);
-    dm_init(&dm_motor[1], 2, DM_MODE_MIT, DM_4310);
-    dm_init(&dm_motor[2], 3, DM_MODE_MIT, DM_4310);
-    dm_init(&dm_motor[3], 4, DM_MODE_MIT, DM_4310);
+    dm_init(&dm_motor[0], 1, DM_MODE_MIT, DM_4310);   // BR
+    dm_init(&dm_motor[1], 2, DM_MODE_MIT, DM_4310);   // FR
+    dm_init(&dm_motor[2], 4, DM_MODE_MIT, DM_4310);   // BL
+    dm_init(&dm_motor[3], 3, DM_MODE_MIT, DM_4310);   // FL
 }
 
 /* ---- 使能 (逐个, 间隔 5ms 防止 CAN 拥塞) ---- */
@@ -68,11 +68,11 @@ void chassis_update(void)
     // FR: 45° 右前安装, 投影到 X/Y 分量为 +cos45/-cos45
     motor_out[1] = ( COS45 * vx_s - COS45 * vy_s + vw_s) / WHEEL_RADIUS;
 
-    // FL: 45° 右后安装, 投影到 X/Y 分量为 +cos45/+cos45
-    motor_out[2] = ( COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;
-
     // BL: 45° 左后安装, 投影到 X/Y 分量为 -cos45/+cos45
-    motor_out[3] = (-COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;
+    motor_out[2] = (-COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;
+
+    // FL: 45° 右后安装, 投影到 X/Y 分量为 +cos45/+cos45
+    motor_out[3] = ( COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;
 
     // MIT + kp=0 速度控制: kd 提供阻尼, 比纯 SPD 模式平顺
     for (int i = 0; i < 4; i++)
