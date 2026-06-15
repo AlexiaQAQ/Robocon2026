@@ -1,16 +1,19 @@
-# Robocon 2026 — R1 Chassis Controller Firmware
+# Robocon 2026 — R1 Chassis Controller Firmware (Robomaster Dev Board Type A)
 
-[![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
+[![MCU](https://img.shields.io/badge/MCU-STM32F427IIHx-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f427-437.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
 [![IDE](https://img.shields.io/badge/IDE-Keil%20MDK-009F4D)](https://www.keil.com/)
+[![Board](https://img.shields.io/badge/Board-RoboMaster_A-555555)]()
 
 > 📖 [中文文档](README.md)
 
 ## Overview
 
-Firmware for the **R1 chassis car** — the first validation vehicle of Robocon 2026 season. Built on **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS**.
+Firmware for the **R1 chassis car** — the first validation vehicle of Robocon 2026 season. Built on **STM32F427IIHx** (Cortex-M4F, 180MHz, 2MB Flash, 256KB SRAM) + **FreeRTOS**.
 
-R1 served as the platform for **motor driver library development, SBUS remote control validation, and DM-series motor CAN protocol adaptation**. Its `motor_control` module has become the foundation library for subsequent vehicles including R2.
+> **Hardware platform**: Robomaster Development Board Type A (official DJI board), different from the custom Board A used on R1 upper / R2. The custom Board A uses STM32F427IIHx.
+
+R1 served as the platform for **motor driver library development, SBUS remote control validation, and DM-series motor CAN protocol adaptation**. Its `motor_control` module has become the foundation library for subsequent vehicles including R2. The R1 chassis and upper controller share a single SBUS receiver (Y-split cable); each board decodes the SBUS signal independently.
 
 > **2026-06-06** Motor control refactor: introduced `dm_model_t` multi-model motor support, replacing global hardcoded parameters.
 
@@ -19,7 +22,9 @@ R1 served as the platform for **motor driver library development, SBUS remote co
 ## Hardware
 
 ### MCU
-- **Chip**: STM32F407VET6 (Cortex-M4F, 168MHz, 512KB Flash, 192KB SRAM)
+- **Chip**: STM32F427IIHx (Cortex-M4F, 180MHz, 2MB Flash, 256KB SRAM)
+- **Board**: Robomaster Development Board Type A (official DJI)
+- **Clock**: HSE 8MHz → PLL 168MHz (HCLK=168, APB1=42, APB2=84)
 
 ### Peripheral Pin Map
 

@@ -1,14 +1,17 @@
-# Robocon 2026 — R2主控固件 (A板)
+# Robocon 2026 — R2 主控固件 (自制 A 板)
 
 [![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
 [![IDE](https://img.shields.io/badge/IDE-Keil%20MDK-009F4D)](https://www.keil.com/)
+[![Board](https://img.shields.io/badge/Board-自制A板-555555)]()
 
 > 📖 [English version](README.en.md)
 
 ## 概述
 
-本项目为 Robocon 2026 赛季 R2 机器人的主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS** 实时操作系统开发。
+本项目为 Robocon 2026 赛季 R2 机器人的主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz, 512KB Flash, 192KB SRAM) + **FreeRTOS** 实时操作系统开发。
+
+> **硬件平台**: 自制 A 板（与 R1 上层主控相同），非 Robomaster 开发板 A 型。Robomaster 开发板 A 型使用 STM32F427IIHx，仅用于 R1 下层底盘。
 
 机器人采用**四全向轮底盘 + 升降机构 + 左右双机械臂**的结构，主控负责底层驱动（电机控制、电磁阀控制），通过 SBUS 遥控器直连控制，或接收上位机（小电脑）串口指令实现对底盘和机械臂的控制。
 

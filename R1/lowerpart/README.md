@@ -1,16 +1,19 @@
-# Robocon 2026 — R1 底盘主控固件
+# Robocon 2026 — R1 底盘主控固件 (Robomaster 开发板 A 型)
 
-[![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
+[![MCU](https://img.shields.io/badge/MCU-STM32F427IIHx-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f427-437.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
 [![IDE](https://img.shields.io/badge/IDE-Keil%20MDK-009F4D)](https://www.keil.com/)
+[![Board](https://img.shields.io/badge/Board-RoboMaster_A-555555)]()
 
 > 📖 [English version](README.en.md)
 
 ## 概述
 
-本项目为 Robocon 2026 赛季 **R1 底盘车**的主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS** 实时操作系统开发。
+本项目为 Robocon 2026 赛季 **R1 底盘车**的主控制板固件，基于 **STM32F427IIHx** (Cortex-M4F, 180MHz, 2MB Flash, 256KB SRAM) + **FreeRTOS** 实时操作系统开发。
 
-R1 作为赛季首台验证车，承担了**电机驱动库搭建、SBUS 遥控链路验证、DM 系列电机 CAN 协议适配**的使命。其电机控制模块 (`motor_control.c/h`) 经过打磨后成为后续 R2 等车型的基础库。
+> **硬件平台**: Robomaster 开发板 A 型（大疆官方 C 型开发板），与 R1 上层/R2 的自制 A 板不同。自制 A 板使用 STM32F427IIHx。
+
+R1 作为赛季首台验证车，承担了**电机驱动库搭建、SBUS 遥控链路验证、DM 系列电机 CAN 协议适配**的使命。其电机控制模块 (`motor_control.c/h`) 经过打磨后成为后续 R2 等车型的基础库。R1 底盘与上层共享同一接收机（通过 Y 线并联），上/下层各自独立解析 SBUS 信号。
 
 > **2026-06-06** 电机控制重构: 引入 `dm_model_t` 多型号电机支持，替代全局硬编码参数。
 
@@ -19,7 +22,9 @@ R1 作为赛季首台验证车，承担了**电机驱动库搭建、SBUS 遥控�
 ## 硬件架构
 
 ### 主控芯片
-- **MCU**: STM32F407VET6 (Cortex-M4F, 168MHz, 512KB Flash, 192KB SRAM)
+- **MCU**: STM32F427IIHx (Cortex-M4F, 180MHz, 2MB Flash, 256KB SRAM)
+- **硬件板**: Robomaster 开发板 A 型 (大疆官方)
+- **时钟**: HSE 8MHz → PLL 168MHz (HCLK=168, APB1=42, APB2=84)
 
 ### 外设资源与引脚映射
 

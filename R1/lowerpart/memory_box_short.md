@@ -1,7 +1,7 @@
 # R1 底盘主控 — 短记忆匣
 
 ## 项目
-STM32F407VET6 + FreeRTOS，**R1 底盘车**。赛季首台验证车，负责 DM 电机驱动库搭建和 SBUS 遥控链路验证。Keil MDK-ARM (`master_a.uvprojx`)。
+STM32F427IIHx + FreeRTOS，**R1 底盘车**（Robomaster 开发板 A 型）。赛季首台验证车，负责 DM 电机驱动库搭建和 SBUS 遥控链路验证。Keil MDK-ARM (`master_a.uvprojx`)。
 
 ## 当前状态
 
@@ -19,7 +19,7 @@ STM32F407VET6 + FreeRTOS，**R1 底盘车**。赛季首台验证车，负责 DM 
 
 | 参数 | 值 |
 |------|-----|
-| MCU | STM32F407VET6, 168MHz |
+| MCU | STM32F427IIHx, 180MHz |
 | SBUS | USART1 (PB6/PB7), 100kbps, 9-bit Even 2-stop |
 | CH4 使能阈值 | 1600 (`ch_down()` 函数) |
 | SBUS 超时 | 50ms |

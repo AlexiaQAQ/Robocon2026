@@ -30,15 +30,16 @@ R1 **不是**竞赛车 — 它没有机械臂、没有上位机通信、没有�
 
 ### 2.1 芯片
 
-- **型号**: STM32F407VET6
-- **封装**: LQFP-100
+- **型号**: STM32F427IIHx
+- **硬件板**: Robomaster 开发板 A 型 (大疆官方)
+- **封装**: LQFP-176
 - **内核**: Cortex-M4F (单精度 FPU)
 - **频率**: HSE 8MHz → PLL (M=6, N=168, P=2) → SYSCLK 168MHz
   - AHB: 168MHz (÷1)
   - APB1: 42MHz (÷4)
   - APB2: 84MHz (÷2)
-- **Flash**: 512KB
-- **SRAM**: 192KB (128KB + 64KB CCM)
+- **Flash**: 2MB
+- **SRAM**: 256KB (192KB + 64KB CCM)
 
 ### 2.2 完整引脚映射
 

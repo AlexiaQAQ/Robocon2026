@@ -1,14 +1,17 @@
-# Robocon 2026 — R2 Main Control Firmware (Board A)
+# Robocon 2026 — R2 Main Control Firmware (Custom Board A)
 
 [![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
 [![IDE](https://img.shields.io/badge/IDE-Keil%20MDK-009F4D)](https://www.keil.com/)
+[![Board](https://img.shields.io/badge/Board-Custom_A-555555)]()
 
 > 📖 [中文文档](README.md)
 
 ## Overview
 
-Main control board firmware for the Robocon 2026 R2 robot, developed on **STM32F407VET6** (Cortex-M4F, 168MHz) with **FreeRTOS** real-time operating system.
+Main control board firmware for the Robocon 2026 R2 robot, developed on **STM32F407VET6** (Cortex-M4F, 168MHz, 512KB Flash, 192KB SRAM) with **FreeRTOS** real-time operating system.
+
+> **Hardware platform**: Custom Board A (same as R1 upper main controller), NOT the Robomaster Development Board Type A. The Robomaster board uses STM32F427IIHx and is only used on the R1 lower chassis.
 
 The robot features a **four-omni-wheel chassis + lifting mechanism + dual arm (left & right)** structure. The main controller handles low-level motor and solenoid valve control, operable via SBUS remote (manual mode) or host PC serial commands (automatic mode).
 
