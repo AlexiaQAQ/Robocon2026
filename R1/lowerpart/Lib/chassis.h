@@ -18,7 +18,7 @@
 #ifndef _CHASSIS_H_
 #define _CHASSIS_H_
 
-#include "motor_control.h"
+#include "dm_motor.h"
 
 /* ---- 电机在 dm_motor[] 中的索引 (CAN ID 1~4) ---- */
 #define CHASSIS_MOTOR_BR  0   // 后右, CAN ID 1

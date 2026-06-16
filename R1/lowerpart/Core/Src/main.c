@@ -32,7 +32,7 @@
 
 #include "bsp_can.h"
 #include "sbus_set.h"
-#include "motor_control.h"
+#include "dm_motor.h"
 #include "chassis.h"
 /* USER CODE END Includes */
 

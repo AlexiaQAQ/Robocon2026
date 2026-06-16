@@ -82,8 +82,8 @@ virtualFolder:
         - path: ../Lib/bsp_can.h
         - path: ../Lib/CAN_receive.c
         - path: ../Lib/CAN_receive.h
-        - path: ../Lib/motor_control.c
-        - path: ../Lib/motor_control.h
+        - path: ../Lib/dm_motor.c
+        - path: ../Lib/dm_motor.h
         - path: ../Lib/sbus_set.c
         - path: ../Lib/sbus_set.h
         - path: ../Lib/pid.c

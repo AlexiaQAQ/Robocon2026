@@ -840,14 +840,14 @@
               <FilePath>..\Lib\CAN_receive.h</FilePath>
             </File>
             <File>
-              <FileName>motor_control.c</FileName>
+              <FileName>dm_motor.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Lib\motor_control.c</FilePath>
+              <FilePath>..\Lib\dm_motor.c</FilePath>
             </File>
             <File>
-              <FileName>motor_control.h</FileName>
+              <FileName>dm_motor.h</FileName>
               <FileType>5</FileType>
-              <FilePath>..\Lib\motor_control.h</FilePath>
+              <FilePath>..\Lib\dm_motor.h</FilePath>
             </File>
             <File>
               <FileName>sbus_set.c</FileName>

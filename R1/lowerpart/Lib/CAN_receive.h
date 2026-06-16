@@ -3,7 +3,7 @@
 
 #include "main.h"
 #include "can.h"
-#include "motor_control.h"
+#include "dm_motor.h"
 
 //rm motor data
 typedef struct
