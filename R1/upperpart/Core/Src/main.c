@@ -22,7 +22,6 @@
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -30,6 +29,8 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include "sbus_set.h"
+#include "bsp_can.h"
+#include "dm_motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,7 +40,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SBUS_TIMEOUT_MS 50
+#define SBUS_TIMEOUT_MS 100
+
+/* 抬升电机: 4x DM4340, CAN1, 位置-速度模式 */
+#define LIFT_CAN      hcan1
+#define LIFT_SPEED    4.0f
+#define LIFT_RETURN_SPEED  2.0f
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -54,6 +60,8 @@ uint16_t led_buf = 0x0001;
 static uint32_t last_sbus_tick = 0;
 static bool last_ch4 = false;
 static bool sys_enabled = false;
+static float lift_target = 0.2f;          /* 抬升目标高度, CH6 选择 */
+static motor_t lift_motor[4];
 
 /* USER CODE END PV */
 
@@ -61,18 +69,14 @@ static bool sys_enabled = false;
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
-
+void lift_enable(void);
+void lift_disable(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 /* ------- SBUS helper functions ------- */
-
-static inline bool sbus_frame_valid(void)
-{
-	return (sbus_rx_buf[23] == 0x00 && sbus_rx_buf[0] == 0x0f && sbus_rx_buf[24] == 0x00);
-}
 
 static inline bool sbus_connected(void)
 {
@@ -98,20 +102,46 @@ static inline bool ch_mid(int ch)
 
 static void system_enable_handler(void)
 {
-	bool ch4 = sbus_connected() && sbus_frame_valid() && ch_high(4);
+	bool ch4 = ch_high(4);
 
 	if(ch4 && !last_ch4)
 	{
-		/* CH4 上升沿 → 解锁 */
+		lift_enable();
 		sys_enabled = true;
 	}
 	else if(!ch4 && last_ch4)
 	{
-		/* CH4 下降沿或遥控器断联 → 锁车 */
 		sys_enabled = false;
+		lift_disable();
 	}
 
 	last_ch4 = ch4;
+}
+
+/* ------- 抬升电机控制 ------- */
+
+void lift_init(void)
+{
+	dm_init(&lift_motor[0], 1, DM_MODE_POS, DM_4310);
+	dm_init(&lift_motor[1], 2, DM_MODE_POS, DM_4310);
+	dm_init(&lift_motor[2], 3, DM_MODE_POS, DM_4310);
+	dm_init(&lift_motor[3], 4, DM_MODE_POS, DM_4310);
+}
+
+void lift_enable(void)
+{
+	dm_enable(&LIFT_CAN, &lift_motor[0]);	vTaskDelay(2);
+	dm_enable(&LIFT_CAN, &lift_motor[1]);	vTaskDelay(2);
+	dm_enable(&LIFT_CAN, &lift_motor[2]);	vTaskDelay(2);
+	dm_enable(&LIFT_CAN, &lift_motor[3]);	vTaskDelay(2);
+}
+
+void lift_disable(void)
+{
+	dm_disable(&LIFT_CAN, &lift_motor[0]);	vTaskDelay(2);
+	dm_disable(&LIFT_CAN, &lift_motor[1]);	vTaskDelay(2);
+	dm_disable(&LIFT_CAN, &lift_motor[2]);	vTaskDelay(2);
+	dm_disable(&LIFT_CAN, &lift_motor[3]);	vTaskDelay(2);
 }
 
 /* ------- Tasks ------- */
@@ -135,14 +165,55 @@ void sbus_task(void *parameter)
 {
 	while(1)
 	{
-		rx_set(&sbus_ch);
-
-		if(sbus_frame_valid())
+		if(sbus_frame_ready)
+		{
+			sbus_frame_ready = false;
 			last_sbus_tick = xTaskGetTickCount();
 
-		system_enable_handler();
+			system_enable_handler();
 
-		vTaskDelay(10);
+			/* CH5 下拨 → 回零, 中位 → CH6 三段选高度 */
+			if(ch_low(5))
+				lift_target = 0.2f;
+			else if(ch_mid(5))
+			{
+				if(ch_high(6))
+					lift_target = 20.0f;
+				else if(ch_low(6))
+					lift_target = 10.0f;
+				else
+					lift_target = 15.0f;
+			}
+		}
+		else if(!sbus_connected())
+		{
+			/* 超时断联 → 强制锁车 */
+			if(sys_enabled)
+			{
+				sys_enabled = false;
+				lift_disable();
+				last_ch4 = false;
+			}
+		}
+
+		vTaskDelay(4);
+	}
+}
+
+/* 抬升控制任务: 50Hz 发送位置-速度指令 */
+void lift_task(void *parameter)
+{
+	while(1)
+	{
+		if(sys_enabled)
+		{
+			float speed = (lift_target == 0.2f) ? LIFT_RETURN_SPEED : LIFT_SPEED;
+			dm_pos_ctrl(&LIFT_CAN, 1, -lift_target, speed);	vTaskDelay(2);
+			dm_pos_ctrl(&LIFT_CAN, 2,  lift_target, speed);	vTaskDelay(2);
+			dm_pos_ctrl(&LIFT_CAN, 3, -lift_target, speed); vTaskDelay(2);
+			dm_pos_ctrl(&LIFT_CAN, 4,  lift_target, speed);	vTaskDelay(2);
+		}
+		vTaskDelay(20);
 	}
 }
 
@@ -151,9 +222,12 @@ void start_task(void *parameter)
 	while(1)
 	{
 		sbus_rx_init();
+		can_filter_init();
+		lift_init();
 
-		xTaskCreate(led_task, "led_task", 128, NULL, 0, NULL);
+		xTaskCreate(led_task, "led_task", 56, NULL, 0, NULL);
 		xTaskCreate(sbus_task, "remote_task", 512, NULL, 0, NULL);
+		xTaskCreate(lift_task, "lift_task", 512, NULL, 0, NULL);
 
 		vTaskDelete(NULL);
 	}
@@ -197,8 +271,6 @@ int main(void)
   MX_SPI3_Init();
   MX_UART4_Init();
   MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
-  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 	
 	if (xTaskCreate(start_task, "start_task", 256, NULL, 0, NULL) != pdPASS)
@@ -326,19 +398,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

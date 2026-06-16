@@ -26,11 +26,11 @@ void chassis_init(CAN_HandleTypeDef *hcan)
 {
     (void)hcan;
 
-    /* 全向轮: DM_4310 MIT 模式 */
-    dm_init(&dm_motor[0], 1, DM_MODE_MIT, DM_4310);
-    dm_init(&dm_motor[1], 2, DM_MODE_MIT, DM_4310);
-    dm_init(&dm_motor[2], 3, DM_MODE_MIT, DM_4310);
-    dm_init(&dm_motor[3], 4, DM_MODE_MIT, DM_4310);
+    /* 全向轮: DM_3519 MIT 模式 */
+    dm_init(&dm_motor[0], 1, DM_MODE_MIT, DM_3519);
+    dm_init(&dm_motor[1], 2, DM_MODE_MIT, DM_3519);
+    dm_init(&dm_motor[2], 3, DM_MODE_MIT, DM_3519);
+    dm_init(&dm_motor[3], 4, DM_MODE_MIT, DM_3519);
 
     /* 独立抬升: DM_4310 POS 模式 */
     dm_init(&dm_motor[4], 5, DM_MODE_POS, DM_4310);
