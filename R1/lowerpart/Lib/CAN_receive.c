@@ -17,7 +17,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 
 	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_data);
 
-	dm_rx_cbk(dm_motor, rx_data);
+	//dm_rx_cbk(dm_motor, rx_data);
 }
 
 

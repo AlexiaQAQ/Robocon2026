@@ -68,7 +68,7 @@
 /* USER CODE BEGIN PV */
 uint16_t led_buf = 0x0001;
 
-#define SBUS_TIMEOUT_MS 50
+#define SBUS_TIMEOUT_MS 200
 static uint32_t last_sbus_tick = 0;
 
 float set_vx = 0.0f;
@@ -105,7 +105,7 @@ bool ch_down(int16_t ch)
 
 static void system_enable_handler(void)
 {
-	bool ch4 = sbus_connected() && sbus_frame_valid() && ch_down(4);
+	bool ch4 = sbus_connected() && ch_down(4);
 	
 	if (ch4 && !last_ch4)
 	{
@@ -150,13 +150,13 @@ void remote_task(void *parameter)
 			int16_t ch_val;
 
 			ch_val = sbus_ch.ch[2];
-			set_vx = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -1000, 1000);
+			set_vx = -(ch_val >= 990 && ch_val <= 1010) ? 0 : Map(ch_val, 333, 1666, -15, 15);
 
 			ch_val = sbus_ch.ch[3];
-			set_vy = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -1000, 1000);
+			set_vy = -(ch_val >= 990 && ch_val <= 1010) ? 0 : Map(ch_val, 333, 1666, -15, 15);
 
 			ch_val = sbus_ch.ch[0];
-			set_vw = -(ch_val >= 988 && ch_val <= 995) ? 0 : Map(ch_val, 326, 1659, -2500, 2500);
+			set_vw = -(ch_val >= 990 && ch_val <= 1010) ? 0 : Map(ch_val, 333, 1666, -10, 10);
 
 		}
 		
@@ -168,7 +168,7 @@ void remote_task(void *parameter)
 			set_vw = 0;
 		}
 		
-		vTaskDelay(4);
+		vTaskDelay(10);
 	}
 }
 
