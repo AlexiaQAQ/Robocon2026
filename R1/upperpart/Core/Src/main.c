@@ -46,6 +46,21 @@
 #define LIFT_CAN      hcan1
 #define LIFT_SPEED    4.0f
 #define LIFT_RETURN_SPEED  2.0f
+
+/* 双机械臂: 2x2 电机, CAN2, 位置模式 */
+#define ARM_CAN       hcan2
+/* 左臂: 根部 4340(ID1) + 末端 4310(ID2) | 右臂: 根部 4340(ID3) + 末端 4310(ID4) */
+
+/* 机械臂关节限幅 (rad), 0=向前伸直 */
+#define ARM_L_ROOT_MIN    -1.68f    /* 左根: 向上为负, 竖着稍微往后 */
+#define ARM_L_ROOT_MAX     0.0f
+#define ARM_L_TIP_MIN     -1.57f    /* 左末: 向上为正, 朝地面 */
+#define ARM_L_TIP_MAX      0.0f
+#define ARM_R_ROOT_MIN     0.0f     /* 右根: 向上为正, 竖着稍微往后 */
+#define ARM_R_ROOT_MAX     1.68f
+#define ARM_R_TIP_MIN      0.0f     /* 右末: 向上为负, 朝地面 */
+#define ARM_R_TIP_MAX      1.57f
+#define ARM_SPEED    0.5f
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,6 +77,10 @@ static bool last_ch4 = false;
 static bool sys_enabled = false;
 static float lift_target = 0.2f;          /* 抬升目标高度, CH6 选择 */
 static motor_t lift_motor[4];
+static motor_t arm_motor[4];   /* [0]左根4340 [1]左末4310 [2]右根4340 [3]右末4310 */
+static float arm_root = 0.0f;         /* 机械臂根部目标角度 */
+static float arm_tip  = 0.0f;         /* 机械臂末端目标角度 */
+static bool  arm_left = true;         /* true=左臂, false=右臂 */
 
 /* USER CODE END PV */
 
@@ -71,6 +90,8 @@ void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 void lift_enable(void);
 void lift_disable(void);
+void arm_enable(void);
+void arm_disable(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -107,12 +128,14 @@ static void system_enable_handler(void)
 	if(ch4 && !last_ch4)
 	{
 		lift_enable();
+		arm_enable();
 		sys_enabled = true;
 	}
 	else if(!ch4 && last_ch4)
 	{
 		sys_enabled = false;
 		lift_disable();
+		arm_disable();
 	}
 
 	last_ch4 = ch4;
@@ -142,6 +165,32 @@ void lift_disable(void)
 	dm_disable(&LIFT_CAN, &lift_motor[1]);	vTaskDelay(2);
 	dm_disable(&LIFT_CAN, &lift_motor[2]);	vTaskDelay(2);
 	dm_disable(&LIFT_CAN, &lift_motor[3]);	vTaskDelay(2);
+}
+
+/* ------- 机械臂电机控制 ------- */
+
+void arm_init(void)
+{
+	dm_init(&arm_motor[0], 1, DM_MODE_POS, DM_4340);   /* 左臂根部 */
+	dm_init(&arm_motor[1], 2, DM_MODE_POS, DM_4310);   /* 左臂末端 */
+	dm_init(&arm_motor[2], 3, DM_MODE_POS, DM_4340);   /* 右臂根部 */
+	dm_init(&arm_motor[3], 4, DM_MODE_POS, DM_4310);   /* 右臂末端 */
+}
+
+void arm_enable(void)
+{
+	dm_enable(&ARM_CAN, &arm_motor[0]);	vTaskDelay(2);
+	dm_enable(&ARM_CAN, &arm_motor[1]);	vTaskDelay(2);
+	dm_enable(&ARM_CAN, &arm_motor[2]);	vTaskDelay(2);
+	dm_enable(&ARM_CAN, &arm_motor[3]);	vTaskDelay(2);
+}
+
+void arm_disable(void)
+{
+	dm_disable(&ARM_CAN, &arm_motor[0]);	vTaskDelay(2);
+	dm_disable(&ARM_CAN, &arm_motor[1]);	vTaskDelay(2);
+	dm_disable(&ARM_CAN, &arm_motor[2]);	vTaskDelay(2);
+	dm_disable(&ARM_CAN, &arm_motor[3]);	vTaskDelay(2);
 }
 
 /* ------- Tasks ------- */
@@ -178,11 +227,35 @@ void sbus_task(void *parameter)
 			else if(ch_mid(5))
 			{
 				if(ch_high(6))
-					lift_target = 20.0f;
+					lift_target = 29.3f;
 				else if(ch_low(6))
-					lift_target = 10.0f;
+					lift_target = 19.0f;
 				else
-					lift_target = 15.0f;
+					lift_target = 28.8f;
+			}
+
+			/* CH11 选臂: >1000左臂, <1000右臂 */
+			arm_left = (sbus_ch.ch[11] > 1000);
+
+			if(ch_low(7))
+			{
+				/* CH7 拨下 → 机械臂放下 */
+				if(arm_left)
+				{
+					arm_root = -1.68f;
+					arm_tip  = ch_high(6) ? 0.0f : 1.57f;  /* 3层末端向前, 1~2层朝地 */
+				}
+				else
+				{
+					arm_root = 1.68f;
+					arm_tip  = ch_high(6) ? 0.0f : -1.57f;
+				}
+			}
+			else
+			{
+				/* CH7 未拨下 → 机械臂抬起回零 */
+				arm_root = 0.0f;
+				arm_tip  = 0.0f;
 			}
 		}
 		else if(!sbus_connected())
@@ -217,6 +290,28 @@ void lift_task(void *parameter)
 	}
 }
 
+/* 机械臂控制任务: 50Hz */
+void arm_task(void *parameter)
+{
+	while(1)
+	{
+		if(sys_enabled)
+		{
+			if(arm_left)
+			{
+				dm_pos_ctrl(&ARM_CAN, 1,  arm_root, ARM_SPEED);	vTaskDelay(2);
+				dm_pos_ctrl(&ARM_CAN, 2,  arm_tip,  ARM_SPEED);
+			}
+			else
+			{
+				dm_pos_ctrl(&ARM_CAN, 3,  arm_root, ARM_SPEED);	vTaskDelay(2);
+				dm_pos_ctrl(&ARM_CAN, 4, -arm_tip,  ARM_SPEED);
+			}
+		}
+		vTaskDelay(20);
+	}
+}
+
 void start_task(void *parameter)
 {
 	while(1)
@@ -224,10 +319,12 @@ void start_task(void *parameter)
 		sbus_rx_init();
 		can_filter_init();
 		lift_init();
+		arm_init();
 
 		xTaskCreate(led_task, "led_task", 56, NULL, 0, NULL);
 		xTaskCreate(sbus_task, "remote_task", 512, NULL, 0, NULL);
 		xTaskCreate(lift_task, "lift_task", 512, NULL, 0, NULL);
+		xTaskCreate(arm_task, "arm_task", 256, NULL, 0, NULL);
 
 		vTaskDelete(NULL);
 	}

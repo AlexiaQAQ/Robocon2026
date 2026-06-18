@@ -16,7 +16,7 @@
 
 #include "main.h"
 #include "can.h"
-#include "motor_control.h"
+#include "dm_motor.h"
 
 /* ---- dm_motor[] 索引 ---- */
 #define CHASSIS_MOTOR_BR  0   // 全向轮后右, CAN ID 1
@@ -38,9 +38,9 @@
 /* ---- 底盘物理参数 ---- */
 #define CHASSIS_R        0.245f            // 轮心到几何中心距离 (m)
 #define WHEEL_RADIUS     0.064f            // 全向轮半径 (m), 直径 127mm
-#define CHASSIS_TORQUE   4.0f              // MIT 阻尼 (kd), 越大越"硬"
+#define CHASSIS_TORQUE   6.0f              // MIT 阻尼 (kd), 越大越"硬"
 #define COS45            0.70710678118f
-#define SPEED_SCALE      0.00001f          // 已标定, 勿改 (上位机适配)
+#define SPEED_SCALE      0.0001f           // 1/10000, 协议 10000=1m/s
 
 /* 齿条: 电机弧度 → 线性行程 (mm) */
 #define RACK_MM_PER_RAD  20.5f             // 417mm / 20.85rad

@@ -2,7 +2,7 @@
 #define CAN_RECEIVE_H
 
 #include "main.h"
-#include "motor_control.h"
+#include "dm_motor.h"
 #include "mcp2515.h"
 
 //rm motor data

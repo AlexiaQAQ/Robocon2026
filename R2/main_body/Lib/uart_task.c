@@ -1,5 +1,6 @@
 #include "uart_task.h"
 #include "arm.h"
+#include "chassis.h"
 #include <string.h>
 
 /* ==================== DMA 接收缓冲区 ==================== */
@@ -34,61 +35,72 @@ float fb_des = 100.0f, lr_des = 0.0f, ud_des = 50.0f, end_des = -1.57f;
 
 /* ==================== TX 帧 ==================== */
 
-/* 状态帧 27 bytes */
+/* 状态帧 23 bytes (协议 §3) */
 static uint8_t stat_buf[STAT_FRAME_LEN];
-
-/* USART3 传感器帧 */
-static uint8_t uart3_sensor_buf[UART3_SENSOR_FRAME_LEN] = {0xCC, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEE};
 
 /* ==================== 状态帧组装 ==================== */
 
 static void build_status_frame(void)
 {
+    /* ---- 升降实际高度 — 从 POS 电机编码器读取 ---- */
+    {
+        float front_sum = 0.0f, back_sum = 0.0f;
+        int   front_cnt = 0, back_cnt  = 0;
+        static const float lift_dir[4] = { LIFT_DIR_FR, LIFT_DIR_FL, LIFT_DIR_BL, LIFT_DIR_BR };
+
+        /* 前: dm_motor[4]=FR, [5]=FL */
+        for (int i = 4; i <= 5; i++)
+            if (dm_motor[i].start_flag)
+                { front_sum += dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4]; front_cnt++; }
+        /* 后: dm_motor[6]=BL, [7]=BR */
+        for (int i = 6; i <= 7; i++)
+            if (dm_motor[i].start_flag)
+                { back_sum += dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4]; back_cnt++; }
+
+        lift_front_actual = front_cnt ? (uint16_t)(front_sum / front_cnt) : 0xFFFF;
+        lift_back_actual  = back_cnt  ? (uint16_t)(back_sum  / back_cnt)  : 0xFFFF;
+    }
+
+    /* ========== 组装 (协议 §3, 23 bytes) ========== */
     stat_buf[0]  = 0xCC;
     stat_buf[1]  = (uint8_t)(lift_front_actual >> 8);
     stat_buf[2]  = (uint8_t)(lift_front_actual & 0xFF);
     stat_buf[3]  = (uint8_t)(lift_back_actual >> 8);
     stat_buf[4]  = (uint8_t)(lift_back_actual & 0xFF);
-    // TODO: ToF 距离 (当前填 0xFFFF 表示无效)
-    stat_buf[5]  = 0xFF; stat_buf[6]  = 0xFF;  // tof_front_front
-    stat_buf[7]  = 0xFF; stat_buf[8]  = 0xFF;  // tof_front_back
-    stat_buf[9]  = 0xFF; stat_buf[10] = 0xFF;  // tof_back_front
-    stat_buf[11] = 0xFF; stat_buf[12] = 0xFF;  // tof_back_back
-    /* 左臂当前角度 (mrad, 从 CAN2 反馈读取, 方向已适配协议正=上) */
+
+    /* 光电/TOF 由独立 MCU 处理, 此处占位 */
+    stat_buf[5]  = 0x00;
+    stat_buf[6]  = 0x00;
+    stat_buf[7]  = 0x00;
+    stat_buf[8]  = 0x00;
+
+    /* 左臂 (mrad, ID2 取反) */
     {
         int16_t lp1 = (int16_t)( arm_left_motor[0].para.pos * 1000.0f);
-        int16_t lp2 = (int16_t)(-arm_left_motor[1].para.pos * 1000.0f);  // ID2电机上=负,取反
+        int16_t lp2 = (int16_t)(-arm_left_motor[1].para.pos * 1000.0f);
         int16_t lp3 = (int16_t)( arm_left_motor[2].para.pos * 1000.0f);
-        stat_buf[13] = (uint8_t)(lp1 >> 8);
-        stat_buf[14] = (uint8_t)(lp1 & 0xFF);
-        stat_buf[15] = (uint8_t)(lp2 >> 8);
-        stat_buf[16] = (uint8_t)(lp2 & 0xFF);
-        stat_buf[17] = (uint8_t)(lp3 >> 8);
-        stat_buf[18] = (uint8_t)(lp3 & 0xFF);
+        stat_buf[9]  = (uint8_t)(lp1 >> 8);
+        stat_buf[10] = (uint8_t)(lp1 & 0xFF);
+        stat_buf[11] = (uint8_t)(lp2 >> 8);
+        stat_buf[12] = (uint8_t)(lp2 & 0xFF);
+        stat_buf[13] = (uint8_t)(lp3 >> 8);
+        stat_buf[14] = (uint8_t)(lp3 & 0xFF);
     }
-    /* 右臂当前角度 (mrad, 从 CAN2 反馈读取, ID4/6 取反) */
+    /* 右臂 (mrad, ID4/6 取反) */
     {
-        int16_t rp1 = (int16_t)(-arm_right_motor[0].para.pos * 1000.0f);  // ID4取反
+        int16_t rp1 = (int16_t)(-arm_right_motor[0].para.pos * 1000.0f);
         int16_t rp2 = (int16_t)( arm_right_motor[1].para.pos * 1000.0f);
-        int16_t rp3 = (int16_t)(-arm_right_motor[2].para.pos * 1000.0f);  // ID6取反
-        stat_buf[19] = (uint8_t)(rp1 >> 8);
-        stat_buf[20] = (uint8_t)(rp1 & 0xFF);
-        stat_buf[21] = (uint8_t)(rp2 >> 8);
-        stat_buf[22] = (uint8_t)(rp2 & 0xFF);
-        stat_buf[23] = (uint8_t)(rp3 >> 8);
-        stat_buf[24] = (uint8_t)(rp3 & 0xFF);
+        int16_t rp3 = (int16_t)(-arm_right_motor[2].para.pos * 1000.0f);
+        stat_buf[15] = (uint8_t)(rp1 >> 8);
+        stat_buf[16] = (uint8_t)(rp1 & 0xFF);
+        stat_buf[17] = (uint8_t)(rp2 >> 8);
+        stat_buf[18] = (uint8_t)(rp2 & 0xFF);
+        stat_buf[19] = (uint8_t)(rp3 >> 8);
+        stat_buf[20] = (uint8_t)(rp3 & 0xFF);
     }
-    stat_buf[25] = 0;    // reserved
-    stat_buf[26] = 0xEE;
-}
 
-/* ==================== 传感器帧 ==================== */
-
-static void update_sensor_buf(void)
-{
-    uart3_sensor_buf[3] = (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_11) == GPIO_PIN_SET) ? 0x00 : 0x01;
-    uart3_sensor_buf[2] = (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_9)  == GPIO_PIN_SET) ? 0x00 : 0x01;
-    uart3_sensor_buf[1] = (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_13) == GPIO_PIN_SET) ? 0x00 : 0x01;
+    stat_buf[21] = 0;    // reserved
+    stat_buf[22] = 0xEE;
 }
 
 /* ==================== 初始化 ==================== */
@@ -172,15 +184,6 @@ void uart_task(void *parameter)
             // 状态帧 50Hz → USART2 TX (上位机 RX)
             build_status_frame();
             HAL_UART_Transmit(&huart2, stat_buf, STAT_FRAME_LEN, HAL_MAX_DELAY);
-        }
-
-        // USART3 传感器帧 5Hz (每 200ms, 即 10 个周期)
-        static uint8_t sensor_divider = 0;
-        if (++sensor_divider >= 10)
-        {
-            sensor_divider = 0;
-            update_sensor_buf();
-            HAL_UART_Transmit(&huart3, uart3_sensor_buf, UART3_SENSOR_FRAME_LEN, HAL_MAX_DELAY);
         }
 
         vTaskDelay(20);  // 50Hz

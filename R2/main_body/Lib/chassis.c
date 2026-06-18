@@ -67,9 +67,9 @@ void chassis_disable(CAN_HandleTypeDef *hcan)
 
 void chassis_update(CAN_HandleTypeDef *hcan)
 {
-    float vx_s = -set_vx * SPEED_SCALE * 1.9f;
-    float vy_s =  set_vy * SPEED_SCALE * 1.9f;
-    float vw_s = -set_vw * CHASSIS_R * SPEED_SCALE * 1.9f;
+    float vx_s = -set_vx * SPEED_SCALE;
+    float vy_s =  set_vy * SPEED_SCALE;
+    float vw_s = -set_vw * CHASSIS_R * SPEED_SCALE;
 
     float motor_out[4];
     motor_out[0] = (-COS45 * vx_s - COS45 * vy_s + vw_s) / WHEEL_RADIUS;  // BR

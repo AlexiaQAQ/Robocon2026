@@ -26,7 +26,6 @@ virtualFolder:
                 - path: ../Core/Src/can.c
                 - path: ../Core/Src/dma.c
                 - path: ../Core/Src/spi.c
-                - path: ../Core/Src/tim.c
                 - path: ../Core/Src/usart.c
                 - path: ../Core/Src/stm32f4xx_it.c
                 - path: ../Core/Src/stm32f4xx_hal_msp.c
@@ -89,8 +88,6 @@ virtualFolder:
         - path: ../Lib/sbus_set.h
         - path: ../Lib/pid.c
         - path: ../Lib/pid.h
-        - path: ../Lib/motor_control.c
-        - path: ../Lib/motor_control.h
         - path: ../Lib/uart_task.c
         - path: ../Lib/uart_task.h
         - path: ../Lib/chassis.c
@@ -99,6 +96,8 @@ virtualFolder:
         - path: ../Lib/solenoid_valves.h
         - path: ../Lib/arm.c
         - path: ../Lib/arm.h
+        - path: ../Lib/dm_motor.c
+        - path: ../Lib/dm_motor.h
       folders: []
     - name: ::CMSIS
       files: []
@@ -220,13 +219,10 @@ targets:
           afterBuildTasks: []
           asm-compiler:
             $use: asm-auto
-            defines: []
-            misc-controls: ""
           beforeBuildTasks: []
           c/cpp-compiler:
             language-c: c99
             language-cpp: c++11
-            link-time-optimization: false
             one-elf-section-per-function: true
             optimization: level-3
             short-enums#wchar: true
@@ -239,9 +235,6 @@ targets:
               - .bin
             misc-controls: --diag_suppress=L6329
             output-format: elf
-            ro-base: ""
-            rw-base: ""
-            xo-base: ""
         scatterFilePath: ""
         storageLayout:
           RAM:

@@ -267,24 +267,24 @@ uint8
 
 ## 3. 状态帧：电控 → 上位机
 
-固定长度：`27 bytes`
+固定长度：`23 bytes`
 
 ```text
 [0]     0xCC
 [1-2]   lift_front_actual    # uint16，前升降当前高度，单位 mm
 [3-4]   lift_back_actual     # uint16，后升降当前高度，单位 mm
-[5-6]   tof_front_front_mm   # uint16，前升降前侧 ToF 距离，单位 mm
-[7-8]   tof_front_back_mm    # uint16，前升降后侧 ToF 距离，单位 mm
-[9-10]  tof_back_front_mm    # uint16，后升降前侧 ToF 距离，单位 mm
-[11-12] tof_back_back_mm     # uint16，后升降后侧 ToF 距离，单位 mm
-[13-14] left_arm_pitch1_now  # int16，左机械臂第 1 pitch 当前角，单位 mrad
-[15-16] left_arm_pitch2_now  # int16，左机械臂第 2 pitch 当前角，单位 mrad
-[17-18] left_arm_pitch3_now  # int16，左机械臂第 3 pitch 当前角，单位 mrad
-[19-20] right_arm_pitch1_now # int16，右机械臂第 1 pitch 当前角，单位 mrad
-[21-22] right_arm_pitch2_now # int16，右机械臂第 2 pitch 当前角，单位 mrad
-[23-24] right_arm_pitch3_now # int16，右机械臂第 3 pitch 当前角，单位 mrad
-[25]    reserved             # uint8，预留，默认 0
-[26]    0xEE
+[5]     photo_front_front    # uint8，前升降前侧光电，0=低于预设距离，1=高于预设距离
+[6]     photo_front_back     # uint8，前升降后侧光电，0=低于预设距离，1=高于预设距离
+[7]     photo_back_front     # uint8，后升降前侧光电，0=低于预设距离，1=高于预设距离
+[8]     photo_back_back      # uint8，后升降后侧光电，0=低于预设距离，1=高于预设距离
+[9-10]  left_arm_pitch1_now  # int16，左机械臂第 1 pitch 当前角，单位 mrad
+[11-12] left_arm_pitch2_now  # int16，左机械臂第 2 pitch 当前角，单位 mrad
+[13-14] left_arm_pitch3_now  # int16，左机械臂第 3 pitch 当前角，单位 mrad
+[15-16] right_arm_pitch1_now # int16，右机械臂第 1 pitch 当前角，单位 mrad
+[17-18] right_arm_pitch2_now # int16，右机械臂第 2 pitch 当前角，单位 mrad
+[19-20] right_arm_pitch3_now # int16，右机械臂第 3 pitch 当前角，单位 mrad
+[21]    reserved             # uint8，预留，默认 0
+[22]    0xEE
 ```
 
 ### 3.1 回传高度
@@ -301,19 +301,30 @@ uint16，单位 mm
 - 上位机根据 `target - actual` 自己判断是否到位。
 - 如果某个轴没有编码器或当前高度无效，可先回传 `0xFFFF` 表示无效。
 
-### 3.2 ToF 回传
+### 3.2 光电模块回传
 
-ToF 距离：
+4 路光电传感器各占 1 个 `uint8`：
 
 ```text
-uint16，单位 mm
+[5]  photo_front_front   前升降前侧光电
+[6]  photo_front_back    前升降后侧光电
+[7]  photo_back_front    后升降前侧光电
+[8]  photo_back_back     后升降后侧光电
 ```
+
+值语义：
+
+| 值 | 含义 |
+|---:|:---|
+| `0` | 低于预设距离（物体在检测范围内） |
+| `1` | 高于预设距离（超出检测范围） |
 
 说明：
 
-- 本版协议支持 4 个 ToF 传感器阻挡高度数据，无需回传 valid 位。
-- 如果 ToF 无效或传感器离线，电控可以回传一个固定异常值 `0xFFFF`，上位机按距离阈值处理。
-- `tof_front_front_mm` / `tof_front_back_mm` 分别检测前升降两侧的台阶边缘；`tof_back_front_mm` / `tof_back_back_mm` 检测后升降两侧。
+- 光电模块取代原 ToF 测距传感器，仅输出二值开关信号。
+- 预设距离由光电模块自身硬件调校，电控和上位机无需处理。
+- `photo_front_front` / `photo_front_back` 分别检测前升降两侧的台阶或障碍物边缘；`photo_back_front` / `photo_back_back` 检测后升降两侧。
+- 如果某路传感器离线或故障，回传 `0`（低于预设距离），上位机需结合其他信息综合判断。
 
 ### 3.3 机械臂角度回传
 
@@ -331,7 +342,7 @@ int16，单位 mrad
 ### 3.4 预留字段
 
 ```text
-[25] reserved
+[21] reserved
 ```
 
 说明：
@@ -351,7 +362,6 @@ int16，单位 mrad
 - 复杂故障 bit
 - checksum
 - ACK 应答
-- ToF valid 位
 
 原因：
 
@@ -373,8 +383,8 @@ int16，单位 mrad
 8. 两个机械臂 6 个 pitch 都用 `int16 mrad`，电控按角度闭环即可。
 9. 每个 pitch 关节下位机都要做角度硬限幅，防止上位机发错角度导致机械撞限位。
 10. 武器头 pitch 用 `uint8` 三态枚举：`0=保持`，`1=平行地面`，`2=垂直地面`。
-11. ToF 距离用 `uint16 mm`，不单独回传 valid 位。
-12. 控制帧固定 `30 bytes`，状态帧固定 `27 bytes`。
+11. 4 路光电模块各占 1 个 `uint8`：`0=低于预设距离` / `1=高于预设距离`。
+12. 控制帧固定 `30 bytes`，状态帧固定 `23 bytes`。
 13. `fast / normal` 最好实现成同一位置闭环下的两套参数：
     - `normal`：低速度、低加速度、小容差。
     - `fast`：高速度、高加速度、适当放宽容差。

@@ -20,9 +20,7 @@ bool ch_high(int ch);
 /* ==================== 协议常量 (rc26_vehicle_serial_protocol_final.md) ==================== */
 
 #define CTRL_FRAME_LEN   30   // 控制帧: 上位机→电控
-#define STAT_FRAME_LEN   27   // 状态帧: 电控→上位机
-#define UART3_SENSOR_FRAME_LEN  8
-
+#define STAT_FRAME_LEN   23   // 状态帧: 电控→上位机 (协议 §3)
 /* 速度协议: 10000 = 1 m/s, 10000 = 1 rad/s */
 #define VEL_SCALE        10000.0f
 #define VEL_MAX_MPS      2.0f     // ±2 m/s 限幅

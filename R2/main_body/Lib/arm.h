@@ -22,7 +22,7 @@
 
 #include "main.h"
 #include "can.h"
-#include "motor_control.h"
+#include "dm_motor.h"
 
 /* ==================== CAN2 电机 ID 映射 ==================== */
 

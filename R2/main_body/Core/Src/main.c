@@ -22,7 +22,6 @@
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
-#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -273,8 +272,6 @@ void up_cs_task(void *parameter)
 					lift_set(1, front_mm);  // FL
 					lift_set(2, rear_mm);   // BL
 					lift_set(3, rear_mm);   // BR
-					lift_front_actual = (uint16_t)front_mm;
-					lift_back_actual  = (uint16_t)rear_mm;
 				}
 				lift_vel = LIFT_VEL_SLOW;             // 手动模式慢速抬升
 				flip_vel = GRIPPER_FLIP_VEL_SLOW;     // 手动模式慢速翻转
@@ -286,8 +283,6 @@ void up_cs_task(void *parameter)
 				lift_set(1, (float)lift_front_target);  // FL
 				lift_set(2, (float)lift_back_target);   // BL
 				lift_set(3, (float)lift_back_target);   // BR
-				lift_front_actual = lift_front_target;
-				lift_back_actual  = lift_back_target;
 				lift_vel = (lift_mode == 1) ? LIFT_VEL_FAST : LIFT_VEL_SLOW;
 				flip_vel = GRIPPER_FLIP_VEL_FAST;       // 自动模式快速翻转
 
@@ -340,7 +335,7 @@ void arm_task(void *parameter)
 	 */
 	while (1)
 	{
-		float vel;
+		float vel = ARM_VEL_SLOW;
 		if (sys_enabled)
 		{
 			if (!ch_high(5))
@@ -442,7 +437,6 @@ int main(void)
   MX_UART4_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_TIM1_Init();
   MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 	if (xTaskCreate(start_task, "start_task", 256, NULL, 0, NULL) != pdPASS)
