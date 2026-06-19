@@ -31,6 +31,7 @@
 #include "sbus_set.h"
 #include "bsp_can.h"
 #include "dm_motor.h"
+#include "solenoid_valves.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -78,9 +79,10 @@ static bool sys_enabled = false;
 static float lift_target = 0.2f;          /* 抬升目标高度, CH6 选择 */
 static motor_t lift_motor[4];
 static motor_t arm_motor[4];   /* [0]左根4340 [1]左末4310 [2]右根4340 [3]右末4310 */
-static float arm_root = 0.0f;         /* 机械臂根部目标角度 */
-static float arm_tip  = 0.0f;         /* 机械臂末端目标角度 */
-static bool  arm_left = true;         /* true=左臂, false=右臂 */
+static float arm_L_root = 0.0f;       /* 左臂根部, 向上为负 */
+static float arm_L_tip  = 0.0f;       /* 左臂末端, 向下为负 */
+static float arm_R_root = 0.0f;       /* 右臂根部, 向上为正 */
+static float arm_R_tip  = 0.0f;       /* 右臂末端, 向下为正 */
 
 /* USER CODE END PV */
 
@@ -214,6 +216,8 @@ void sbus_task(void *parameter)
 {
 	while(1)
 	{
+		sbus_poll();
+		
 		if(sbus_frame_ready)
 		{
 			sbus_frame_ready = false;
@@ -234,29 +238,37 @@ void sbus_task(void *parameter)
 					lift_target = 28.8f;
 			}
 
-			/* CH11 选臂: >1000左臂, <1000右臂 */
-			arm_left = (sbus_ch.ch[11] > 1000);
+			/* CH11 >1000 → 控制左臂, <1000 → 控制右臂 */
+			if(sbus_ch.ch[11] > 1000)//左臂
+			{
+				if(ch_low(7))//拨杆在上
+				{
+					arm_L_root = -1.68f;
+					arm_L_tip  =  0.0f;
+				}
+				else//拨杆在下
+				{
+					arm_L_root = 0.0f;
+					arm_L_tip  = ch_high(6) ? 0.0f : -1.57f;//前为第一二层
+				}
+			}
+			else//右臂
+			{
+				if(ch_low(7))//拨杆在上
+				{
+					arm_R_root = 1.68f;
+					arm_R_tip  = 0.0f;
+				}
+				else//拨杆在下
+				{
+					arm_R_root = 0.0f;
+					arm_R_tip  = ch_high(6) ? 0.0f : 1.57f;//前为第一二层
+				}
+			}
 
-			if(ch_low(7))
-			{
-				/* CH7 拨下 → 机械臂放下 */
-				if(arm_left)
-				{
-					arm_root = -1.68f;
-					arm_tip  = ch_high(6) ? 0.0f : 1.57f;  /* 3层末端向前, 1~2层朝地 */
-				}
-				else
-				{
-					arm_root = 1.68f;
-					arm_tip  = ch_high(6) ? 0.0f : -1.57f;
-				}
-			}
-			else
-			{
-				/* CH7 未拨下 → 机械臂抬起回零 */
-				arm_root = 0.0f;
-				arm_tip  = 0.0f;
-			}
+			/* CH8 >1300 左吸盘, CH9 >1300 右吸盘 */
+			YV1(sbus_ch.ch[8] > 1300 ? 1 : 0);
+			YV2(sbus_ch.ch[9] > 1300 ? 1 : 0);
 		}
 		else if(!sbus_connected())
 		{
@@ -269,7 +281,7 @@ void sbus_task(void *parameter)
 			}
 		}
 
-		vTaskDelay(4);
+		vTaskDelay(1);
 	}
 }
 
@@ -285,6 +297,7 @@ void lift_task(void *parameter)
 			dm_pos_ctrl(&LIFT_CAN, 2,  lift_target, speed);	vTaskDelay(2);
 			dm_pos_ctrl(&LIFT_CAN, 3, -lift_target, speed); vTaskDelay(2);
 			dm_pos_ctrl(&LIFT_CAN, 4,  lift_target, speed);	vTaskDelay(2);
+			YV_flash(&LIFT_CAN);     /* 阀状态刷新 */
 		}
 		vTaskDelay(20);
 	}
@@ -297,16 +310,12 @@ void arm_task(void *parameter)
 	{
 		if(sys_enabled)
 		{
-			if(arm_left)
-			{
-				dm_pos_ctrl(&ARM_CAN, 1,  arm_root, ARM_SPEED);	vTaskDelay(2);
-				dm_pos_ctrl(&ARM_CAN, 2,  arm_tip,  ARM_SPEED);
-			}
-			else
-			{
-				dm_pos_ctrl(&ARM_CAN, 3,  arm_root, ARM_SPEED);	vTaskDelay(2);
-				dm_pos_ctrl(&ARM_CAN, 4, -arm_tip,  ARM_SPEED);
-			}
+			/* 左臂: ID1(根 向上为负) + ID2(末 向下为负) */
+			dm_pos_ctrl(&ARM_CAN, 1, arm_L_root, ARM_SPEED);	vTaskDelay(2);
+			dm_pos_ctrl(&ARM_CAN, 2, arm_L_tip,  ARM_SPEED);	vTaskDelay(2);
+			/* 右臂: ID3(根 向上为正) + ID4(末 向下为正) */
+			dm_pos_ctrl(&ARM_CAN, 3, arm_R_root, ARM_SPEED);	vTaskDelay(2);
+			dm_pos_ctrl(&ARM_CAN, 4, arm_R_tip,  ARM_SPEED);
 		}
 		vTaskDelay(20);
 	}

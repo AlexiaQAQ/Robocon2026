@@ -99,7 +99,7 @@ virtualFolder:
 dependenceList: []
 outDir: build
 miscInfo:
-  uid: ef7be6a6ddcec1f6a480067fb292099f
+  uid: 55df7626e81c965953362d31974f2a9a
 targets:
   A_board:
     cppPreprocessAttrs:
@@ -124,86 +124,6 @@ targets:
       debugger: cortex-debug
     toolchain: AC6
     toolchainConfigMap:
-      AC5:
-        archExtensions: ""
-        cpuType: Cortex-M4
-        floatingPointHardware: single
-        options: ""
-        scatterFilePath: ""
-        storageLayout:
-          RAM:
-            - id: 1
-              isChecked: false
-              mem:
-                size: "0x0"
-                startAddr: "0x0"
-              noInit: false
-              tag: RAM
-            - id: 2
-              isChecked: false
-              mem:
-                size: "0x0"
-                startAddr: "0x0"
-              noInit: false
-              tag: RAM
-            - id: 3
-              isChecked: false
-              mem:
-                size: "0x0"
-                startAddr: "0x0"
-              noInit: false
-              tag: RAM
-            - id: 1
-              isChecked: true
-              mem:
-                size: "0x1c000"
-                startAddr: "0x20000000"
-              noInit: false
-              tag: IRAM
-            - id: 2
-              isChecked: true
-              mem:
-                size: "0x4000"
-                startAddr: "0x2001c000"
-              noInit: false
-              tag: IRAM
-          ROM:
-            - id: 1
-              isChecked: false
-              isStartup: false
-              mem:
-                size: "0x0"
-                startAddr: "0x0"
-              tag: ROM
-            - id: 2
-              isChecked: false
-              isStartup: false
-              mem:
-                size: "0x0"
-                startAddr: "0x0"
-              tag: ROM
-            - id: 3
-              isChecked: false
-              isStartup: false
-              mem:
-                size: "0x0"
-                startAddr: "0x0"
-              tag: ROM
-            - id: 1
-              isChecked: true
-              isStartup: true
-              mem:
-                size: "0x80000"
-                startAddr: "0x8000000"
-              tag: IROM
-            - id: 2
-              isChecked: false
-              isStartup: false
-              mem:
-                size: "0x0"
-                startAddr: "0x0"
-              tag: IROM
-        useCustomScatterFile: false
       AC6:
         archExtensions: ""
         cpuType: Cortex-M4

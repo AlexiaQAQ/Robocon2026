@@ -43,7 +43,7 @@ void rx_set(SBUS_t *sbus)
 		{
 			sbus->ch[cnt]=0;
 		}
-		HAL_UART_Receive_DMA(&sbus_uart,sbus_rx_buf,25);//重新打开接收
+		HAL_UART_Receive_DMA(&sbus_uart,sbus_rx_buf,25);//锟斤拷锟铰打开斤拷锟斤拷
 	}
 }
 
