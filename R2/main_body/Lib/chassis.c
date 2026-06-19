@@ -5,7 +5,7 @@
  * @date    2026-06-10
  *
  * 移植到 motor_control 新库 motor_t* API。
- * 全向轮: dm_motor[0~3] DM_4310 MIT 模式
+ * 全向轮: dm_motor[0~3] DM_3519 MIT 模式
  * 抬升:   dm_motor[4~7] DM_4310 POS 模式
  */
 
@@ -32,7 +32,11 @@ void chassis_init(CAN_HandleTypeDef *hcan)
     dm_init(&dm_motor[2], 3, DM_MODE_MIT, DM_3519);
     dm_init(&dm_motor[3], 4, DM_MODE_MIT, DM_3519);
 
-    /* 独立抬升: DM_4310 POS 模式 */
+    /*
+     * 独立抬升: DM_4310 POS 模式
+     * 反馈格式固定为 uint16→±12.5rad (单圈), 超出后 p_int 回卷。
+     * dm_pos_ctrl 直接发 float 可超 12.5rad, 但回读需软件解卷绕 (见 uart_task.c)。
+     */
     dm_init(&dm_motor[4], 5, DM_MODE_POS, DM_4310);
     dm_init(&dm_motor[5], 6, DM_MODE_POS, DM_4310);
     dm_init(&dm_motor[6], 7, DM_MODE_POS, DM_4310);
@@ -67,15 +71,28 @@ void chassis_disable(CAN_HandleTypeDef *hcan)
 
 void chassis_update(CAN_HandleTypeDef *hcan)
 {
-    float vx_s = -set_vx * SPEED_SCALE;
-    float vy_s =  set_vy * SPEED_SCALE;
-    float vw_s = -set_vw * CHASSIS_R * SPEED_SCALE;
+    /* 速度限幅: ±2 m/s, ±3.2 rad/s (安全冗余, 串口侧已有第一道限幅) */
+    float vx_clamp = (set_vx >  20000.0f) ?  20000.0f : ((set_vx < -20000.0f) ? -20000.0f : set_vx);
+    float vy_clamp = (set_vy >  20000.0f) ?  20000.0f : ((set_vy < -20000.0f) ? -20000.0f : set_vy);
+    float vw_clamp = (set_vw >  32000.0f) ?  32000.0f : ((set_vw < -32000.0f) ? -32000.0f : set_vw);
+
+    float vx_s = -vx_clamp * SPEED_SCALE;
+    float vy_s =  vy_clamp * SPEED_SCALE;
+    float vw_s = -vw_clamp * CHASSIS_R * SPEED_SCALE;
 
     float motor_out[4];
-    motor_out[0] = (-COS45 * vx_s - COS45 * vy_s + vw_s) / WHEEL_RADIUS;  // BR
-    motor_out[1] = ( COS45 * vx_s - COS45 * vy_s + vw_s) / WHEEL_RADIUS;  // FR
-    motor_out[2] = ( COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;  // FL
-    motor_out[3] = (-COS45 * vx_s + COS45 * vy_s + vw_s) / WHEEL_RADIUS;  // BL
+    /*
+     * 45° 全向轮逆运动学:
+     *   轮 i 对前进的贡献 = ω_i × r × cos45°
+     *   所以 ω_i = vx / (r × cos45°) 才能让实际车速 = vx
+     *   旧公式 ω = COS45 × vx / r 实际前进 = COS45² × vx = 0.5×vx (偏慢一半)
+     * 旋转项 vw_s/r 无需补偿: 轮子径向分量=1, 无 cos45 衰减
+     */
+    float t_scale = 1.0f / (WHEEL_RADIUS * COS45);
+    motor_out[0] = -vx_s * t_scale - vy_s * t_scale + vw_s / WHEEL_RADIUS;  // BR
+    motor_out[1] =  vx_s * t_scale - vy_s * t_scale + vw_s / WHEEL_RADIUS;  // FR
+    motor_out[2] =  vx_s * t_scale + vy_s * t_scale + vw_s / WHEEL_RADIUS;  // FL
+    motor_out[3] = -vx_s * t_scale + vy_s * t_scale + vw_s / WHEEL_RADIUS;  // BL
 
     /* 发送顺序: BR(1)→FR(2)→BL(4)→FL(3) */
     static const uint8_t order[4] = {0, 1, 3, 2};

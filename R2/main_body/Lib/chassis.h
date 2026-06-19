@@ -43,7 +43,7 @@
 #define SPEED_SCALE      0.0001f           // 1/10000, 协议 10000=1m/s
 
 /* 齿条: 电机弧度 → 线性行程 (mm) */
-#define RACK_MM_PER_RAD  20.5f             // 417mm / 20.85rad
+#define RACK_MM_PER_RAD  20.5f             // 420mm / 20.85rad
 
 /* 抬升位置模式速度 (rad/s) */
 #define LIFT_VEL_SLOW    2.5f

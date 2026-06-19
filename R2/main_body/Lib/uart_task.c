@@ -3,6 +3,11 @@
 #include "chassis.h"
 #include <string.h>
 
+/* 限幅宏 */
+#define LIMIT_VEL(x, max) ((x) > (max) ? (max) : ((x) < -(max) ? -(max) : (x)))
+#define LIMIT_U16( x, max) ((x) > (max) ? (max) : (x))
+#define LIMIT_ARM(x)      ((x) > 3141 ? 3141 : ((x) < -3141 ? -3141 : (x)))
+
 /* ==================== DMA 接收缓冲区 ==================== */
 uint8_t uart1_rx_buf[CTRL_FRAME_LEN];
 
@@ -40,22 +45,54 @@ static uint8_t stat_buf[STAT_FRAME_LEN];
 
 /* ==================== 状态帧组装 ==================== */
 
+/**
+ * 组装 23 字节状态帧 (协议 §3) → USART2 TX
+ *
+ * 升降实际高度从 dm_motor[4~7] 编码器实时计算:
+ *   前升降 = (FR+FL)/2, 后升降 = (BL+BR)/2
+ *   未使能电机不计入, 全未使能返回 0xFFFF
+ *   pos(rad) → mm: pos × RACK_MM_PER_RAD × lift_dir[i]
+ */
 static void build_status_frame(void)
 {
-    /* ---- 升降实际高度 — 从 POS 电机编码器读取 ---- */
+    /* ---- 升降实际高度 — 从 POS 电机编码器读取 (软件解卷绕) ---- */
     {
         float front_sum = 0.0f, back_sum = 0.0f;
         int   front_cnt = 0, back_cnt  = 0;
         static const float lift_dir[4] = { LIFT_DIR_FR, LIFT_DIR_FL, LIFT_DIR_BL, LIFT_DIR_BR };
 
+        /* DM_4310 POS 反馈 p_int→pos 固定为 ±12.5rad (单圈), 超出后回卷。
+         * 一卷 = 2×12.5=25rad = 512.5mm。以 lift_target 为参考, 把 pos 解卷
+         * 到 target±256mm 范围内, 消除回卷导致的负值/溢出。 */
+        const float wrap_mm = 2.0f * 12.5f * RACK_MM_PER_RAD;  // 512.5mm
+
         /* 前: dm_motor[4]=FR, [5]=FL */
         for (int i = 4; i <= 5; i++)
+        {
             if (dm_motor[i].start_flag)
-                { front_sum += dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4]; front_cnt++; }
+            {
+                float raw_mm = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
+                /* 以目标为锚点解卷: 把 raw_mm 拉到 target±256mm 内 */
+                float target_mm = (float)lift_target_mm[i - 4];
+                while (raw_mm - target_mm > wrap_mm * 0.5f) raw_mm -= wrap_mm;
+                while (target_mm - raw_mm > wrap_mm * 0.5f) raw_mm += wrap_mm;
+                front_sum += raw_mm;
+                front_cnt++;
+            }
+        }
         /* 后: dm_motor[6]=BL, [7]=BR */
         for (int i = 6; i <= 7; i++)
+        {
             if (dm_motor[i].start_flag)
-                { back_sum += dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4]; back_cnt++; }
+            {
+                float raw_mm = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
+                float target_mm = (float)lift_target_mm[i - 4];
+                while (raw_mm - target_mm > wrap_mm * 0.5f) raw_mm -= wrap_mm;
+                while (target_mm - raw_mm > wrap_mm * 0.5f) raw_mm += wrap_mm;
+                back_sum += raw_mm;
+                back_cnt++;
+            }
+        }
 
         lift_front_actual = front_cnt ? (uint16_t)(front_sum / front_cnt) : 0xFFFF;
         lift_back_actual  = back_cnt  ? (uint16_t)(back_sum  / back_cnt)  : 0xFFFF;
@@ -143,22 +180,23 @@ static void parse_ctrl_frame(void)
     int16_t vy_raw = read_int16(&uart1_rx_buf[3]);
     int16_t wz_raw = read_int16(&uart1_rx_buf[5]);
 
-    set_vx =  (float)vx_raw;
-    set_vy = -(float)vy_raw;
-    set_vw = -(float)wz_raw;
+    /* 限幅: ±2 m/s, ±3.2 rad/s (协议 §2.1) */
+    set_vx =  (float)LIMIT_VEL(vx_raw, 20000);
+    set_vy = -(float)LIMIT_VEL(vy_raw, 20000);
+    set_vw = -(float)LIMIT_VEL(wz_raw, 32000);
 
-    // 抬升目标
-    lift_front_target = read_uint16(&uart1_rx_buf[7]);
-    lift_back_target  = read_uint16(&uart1_rx_buf[9]);
+    // 抬升目标 — 限幅 0~420mm (齿条满行程)
+    lift_front_target = LIMIT_U16(read_uint16(&uart1_rx_buf[7]), 420);
+    lift_back_target  = LIMIT_U16(read_uint16(&uart1_rx_buf[9]), 420);
     lift_mode         = uart1_rx_buf[11];
 
-    // 机械臂 pitch (mrad)
-    left_pitch1  = read_int16(&uart1_rx_buf[12]);
-    left_pitch2  = read_int16(&uart1_rx_buf[14]);
-    left_pitch3  = read_int16(&uart1_rx_buf[16]);
-    right_pitch1 = read_int16(&uart1_rx_buf[18]);
-    right_pitch2 = read_int16(&uart1_rx_buf[20]);
-    right_pitch3 = read_int16(&uart1_rx_buf[22]);
+    // 机械臂 pitch (mrad) — 硬限幅 ±180°=±3141 mrad (协议 §2.4.4)
+    left_pitch1  = LIMIT_ARM(read_int16(&uart1_rx_buf[12]));
+    left_pitch2  = LIMIT_ARM(read_int16(&uart1_rx_buf[14]));
+    left_pitch3  = LIMIT_ARM(read_int16(&uart1_rx_buf[16]));
+    right_pitch1 = LIMIT_ARM(read_int16(&uart1_rx_buf[18]));
+    right_pitch2 = LIMIT_ARM(read_int16(&uart1_rx_buf[20]));
+    right_pitch3 = LIMIT_ARM(read_int16(&uart1_rx_buf[22]));
 
     // 吸盘
     left_sucker  = uart1_rx_buf[24];

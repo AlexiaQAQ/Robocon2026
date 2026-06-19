@@ -264,10 +264,10 @@ void up_cs_task(void *parameter)
 					int16_t ch9 = sbus_ch.ch[9];
 					float front_mm = (ch8 >= 1021 && ch8 <= 1027)
 									? 0.0f
-									: Map(ch8, 240, 1800, 0.0f, 417.0f);
+									: Map(ch8, 240, 1800, 0.0f, 420.0f);
 					float rear_mm  = (ch9 >= 1021 && ch9 <= 1027)
 									? 0.0f
-									: Map(ch9, 240, 1800, 0.0f, 417.0f);
+									: Map(ch9, 240, 1800, 0.0f, 420.0f);
 					lift_set(0, front_mm);  // FR
 					lift_set(1, front_mm);  // FL
 					lift_set(2, rear_mm);   // BL

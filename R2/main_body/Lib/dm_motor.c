@@ -228,11 +228,14 @@ static HAL_StatusTypeDef dm_send_cmd(CAN_HandleTypeDef *hcan, motor_t *motor, ui
 * @param[in]:   hcan:  指向 CAN_HandleTypeDef 结构的指针
 * @param[in]:   motor: 指向 motor_t 结构的指针
 * @retval:     	HAL 状态 (HAL_StatusTypeDef)
-* @details:    	根据 motor->mode 自动选择对应的 CAN ID 偏移, 发送使能命令 (0xFC)
+* @details:    	发送使能命令 (0xFC) 并置 start_flag=1。
+*               start_flag 供 build_status_frame 判断电机是否已使能,
+*               未使能时回传 0xFFFF 表示高度无效。
 ************************************************************************
 **/
 HAL_StatusTypeDef dm_enable(CAN_HandleTypeDef *hcan, motor_t *motor)
 {
+    motor->start_flag = 1;
     return dm_send_cmd(hcan, motor, DM_CMD_ENABLE);
 }
 
@@ -242,11 +245,13 @@ HAL_StatusTypeDef dm_enable(CAN_HandleTypeDef *hcan, motor_t *motor)
 * @param[in]:   hcan:  指向 CAN_HandleTypeDef 结构的指针
 * @param[in]:   motor: 指向 motor_t 结构的指针
 * @retval:     	HAL 状态 (HAL_StatusTypeDef)
-* @details:    	发送失能命令 (0xFD), 电机停止控制
+* @details:    	发送失能命令 (0xFD) 并清 start_flag=0。
+*               电机失能后编码器回传不再有效, 状态帧回 0xFFFF。
 ************************************************************************
 **/
 HAL_StatusTypeDef dm_disable(CAN_HandleTypeDef *hcan, motor_t *motor)
 {
+    motor->start_flag = 0;
     return dm_send_cmd(hcan, motor, DM_CMD_DISABLE);
 }
 
@@ -492,21 +497,23 @@ static HAL_StatusTypeDef dm_send_cmd_mcp2515(MCP2515_HandleTypeDef *hcan,
 
 /**
 ************************************************************************
-* @brief:      	dm_enable_mcp2515: MCP2515 总线使能电机
+* @brief:      	dm_enable_mcp2515: MCP2515 总线使能电机, 置 start_flag=1
 ************************************************************************
 **/
 HAL_StatusTypeDef dm_enable_mcp2515(MCP2515_HandleTypeDef *hcan, motor_t *motor)
 {
+    motor->start_flag = 1;
     return dm_send_cmd_mcp2515(hcan, motor, DM_CMD_ENABLE);
 }
 
 /**
 ************************************************************************
-* @brief:      	dm_disable_mcp2515: MCP2515 总线失能电机
+* @brief:      	dm_disable_mcp2515: MCP2515 总线失能电机, 清 start_flag=0
 ************************************************************************
 **/
 HAL_StatusTypeDef dm_disable_mcp2515(MCP2515_HandleTypeDef *hcan, motor_t *motor)
 {
+    motor->start_flag = 0;
     return dm_send_cmd_mcp2515(hcan, motor, DM_CMD_DISABLE);
 }
 
