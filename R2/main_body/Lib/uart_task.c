@@ -61,9 +61,10 @@ static void build_status_frame(void)
         int   front_cnt = 0, back_cnt  = 0;
         static const float lift_dir[4] = { LIFT_DIR_FR, LIFT_DIR_FL, LIFT_DIR_BL, LIFT_DIR_BR };
 
-        /* DM_4310 POS 反馈 p_int→pos 固定为 ±12.5rad (单圈), 超出后回卷。
-         * 一卷 = 2×12.5=25rad = 512.5mm。以 lift_target 为参考, 把 pos 解卷
-         * 到 target±256mm 范围内, 消除回卷导致的负值/溢出。 */
+        /* DM_4310 POS 反馈 p_int→pos 固定 ±12.5rad (单圈), 超出回卷。
+         * 一卷 = 512.5mm。平时以 prev 为锚追踪帧间位移, 首帧用 target 锚定。 */
+        static float prev_mm[4];
+        static bool  prev_valid[4];
         const float wrap_mm = 2.0f * 12.5f * RACK_MM_PER_RAD;  // 512.5mm
 
         /* 前: dm_motor[4]=FR, [5]=FL */
@@ -71,12 +72,24 @@ static void build_status_frame(void)
         {
             if (dm_motor[i].start_flag)
             {
-                float raw_mm = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
-                /* 以目标为锚点解卷: 把 raw_mm 拉到 target±256mm 内 */
-                float target_mm = (float)lift_target_mm[i - 4];
-                while (raw_mm - target_mm > wrap_mm * 0.5f) raw_mm -= wrap_mm;
-                while (target_mm - raw_mm > wrap_mm * 0.5f) raw_mm += wrap_mm;
-                front_sum += raw_mm;
+                float raw = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
+                /* 首帧: 以 target 锚定; 后续: 以 prev 追踪 */
+                if (!prev_valid[i - 4])
+                {
+                    float tgt = (float)lift_target_mm[i - 4];
+                    while (raw - tgt > wrap_mm * 0.5f) raw -= wrap_mm;
+                    while (tgt - raw > wrap_mm * 0.5f) raw += wrap_mm;
+                    prev_mm[i - 4]    = raw;
+                    prev_valid[i - 4] = true;
+                }
+                else
+                {
+                    float diff = raw - prev_mm[i - 4];
+                    if      (diff >  wrap_mm * 0.5f) raw -= wrap_mm;
+                    else if (diff < -wrap_mm * 0.5f) raw += wrap_mm;
+                    prev_mm[i - 4] = raw;
+                }
+                front_sum += raw;
                 front_cnt++;
             }
         }
@@ -85,11 +98,23 @@ static void build_status_frame(void)
         {
             if (dm_motor[i].start_flag)
             {
-                float raw_mm = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
-                float target_mm = (float)lift_target_mm[i - 4];
-                while (raw_mm - target_mm > wrap_mm * 0.5f) raw_mm -= wrap_mm;
-                while (target_mm - raw_mm > wrap_mm * 0.5f) raw_mm += wrap_mm;
-                back_sum += raw_mm;
+                float raw = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
+                if (!prev_valid[i - 4])
+                {
+                    float tgt = (float)lift_target_mm[i - 4];
+                    while (raw - tgt > wrap_mm * 0.5f) raw -= wrap_mm;
+                    while (tgt - raw > wrap_mm * 0.5f) raw += wrap_mm;
+                    prev_mm[i - 4]    = raw;
+                    prev_valid[i - 4] = true;
+                }
+                else
+                {
+                    float diff = raw - prev_mm[i - 4];
+                    if      (diff >  wrap_mm * 0.5f) raw -= wrap_mm;
+                    else if (diff < -wrap_mm * 0.5f) raw += wrap_mm;
+                    prev_mm[i - 4] = raw;
+                }
+                back_sum += raw;
                 back_cnt++;
             }
         }
