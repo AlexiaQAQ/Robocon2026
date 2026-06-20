@@ -138,6 +138,11 @@ static void system_enable_handler(void)
 		chassis_disable(&hcan1);              // CAN1: 全向轮×4 + 抬升×4
 		arm_left_disable(&hcan2);               // CAN2: 左臂 ID 1-3
 		arm_right_disable(&hcan2);              // CAN2: 右臂 ID 4-6
+		/* 安全释放: 打开夹爪 + 关闭吸盘, 先发后失能 */
+		YV1(1);                                 // 夹爪打开
+		YV2(0);                                 // 左吸盘松开
+		YV3(0);                                 // 右吸盘松开
+		YV_flash_mcp2515(&hcan3);               // 发送电磁阀状态
 		dm_disable_mcp2515(&hcan3, &gripper_flip_motor);  // hcan3: 夹爪翻转电机
 		set_vx = 0;
 		set_vy = 0;
@@ -215,7 +220,12 @@ void sbus_task(void *parameter)
 					}
 					else if (ch6_val < 1415)        // CH6 中档 ~1024: 夹爪气缸
 					{
-						YV1(2);                     // 翻转 YV1 (1→0, 0→1)
+						YV1(2);                     // 翻转 YV1
+					}
+					else if (ch_high(6))             // CH6 升降模式: 左右吸盘
+					{
+						YV2(2);                     // 翻转左吸盘
+						YV3(2);                     // 翻转右吸盘
 					}
 				}
 				last_ch7_state = ch7_now;
@@ -256,22 +266,18 @@ void up_cs_task(void *parameter)
 			if (!ch_high(5))
 			{
 				/* 手动模式升降控制:
-				   CH6高(>1700): CH8/CH9旋钮控制升降 (调高过渡档)
+				   CH6高(>1700): CH8旋钮同时控制前后升降 (0~420mm)
 				   CH6中/低:     保持当前高度不变 (避免旋钮瞬跳) */
 				if (ch_high(6))
 				{
 					int16_t ch8 = sbus_ch.ch[8];
-					int16_t ch9 = sbus_ch.ch[9];
-					float front_mm = (ch8 >= 1021 && ch8 <= 1027)
+					float mm = (ch8 >= 1021 && ch8 <= 1027)
 									? 0.0f
 									: Map(ch8, 240, 1800, 0.0f, 420.0f);
-					float rear_mm  = (ch9 >= 1021 && ch9 <= 1027)
-									? 0.0f
-									: Map(ch9, 240, 1800, 0.0f, 420.0f);
-					lift_set(0, front_mm);  // FR
-					lift_set(1, front_mm);  // FL
-					lift_set(2, rear_mm);   // BL
-					lift_set(3, rear_mm);   // BR
+					lift_set(0, mm);  // FR
+					lift_set(1, mm);  // FL
+					lift_set(2, mm);  // BL
+					lift_set(3, mm);  // BR
 				}
 				lift_vel = LIFT_VEL_SLOW;             // 手动模式慢速抬升
 				flip_vel = GRIPPER_FLIP_VEL_SLOW;     // 手动模式慢速翻转
