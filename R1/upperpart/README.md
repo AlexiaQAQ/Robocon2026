@@ -1,4 +1,4 @@
-﻿# Robocon 2026 — R1 上层主控固件 (自制 A 板)
+# Robocon 2026 — R1 上层主控固件 (自制 A 板)
 
 [![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
@@ -7,13 +7,13 @@
 
 ## 概述
 
-本项目为 Robocon 2026 赛季 R1 机器人**上层**主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz, 512KB Flash, 192KB SRAM) + **FreeRTOS** 实时操作系统开发。
+本项目为 Robocon 2026 赛季 R1 机器人**上层**主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS** 实时操作系统开发。
 
-> **硬件平台**: 自制 A 板（与 R2 主控相同），非 Robomaster 开发板 A 型。R1 下层底盘使用 Robomaster 开发板 A 型（STM32F427IIHx）。
+> **硬件平台**: 自制 A 板（与 R2 主控相同），非 Robomaster 开发板 A 型。R1 下层底盘使用 Robomaster 开发板 A 型（STM32F427IIHx）。上下层各有独立 SBUS 接收机，无线路连接。
 
-R1 当前采用**四轮麦克纳姆轮底盘 + 机械臂 + 夹取/升降机构**，上层主控负责机械臂 IK、夹取状态机、电磁阀、吸盘等上层机构的控制，同时兼任底盘运动学计算。与下层底盘共享同一个 SBUS 接收机（Y 线并联），上/下层各自独立解析。
+R1 上层负责：4×DM4340 抬升平台、左右双机械臂（2×2 关节）、抓取机构（齿条+翻转+夹爪）、吸盘电磁阀。与下层底盘共享遥控器，各自独立解析 SBUS。
 
-> **2026-05-18**: CH6 三段模式切换（底盘/机械臂/夹取）+ 夹取工序状态机完成。
+> **2026-06-19**: 模块化重构 — 抬升/机械臂/抓取拆分独立状态机库，main.c 只做调度
 
 ---
 
@@ -22,34 +22,32 @@ R1 当前采用**四轮麦克纳姆轮底盘 + 机械臂 + 夹取/升降机构**
 ### 主控芯片
 - **MCU**: STM32F407VET6 (Cortex-M4F, 168MHz, 512KB Flash, 192KB SRAM)
 - **硬件板**: 自制 A 板（与 R2 主控相同）
-- **时钟**: HSE 12MHz → PLL 168MHz (HCLK=168, APB1=42, APB2=84)
+- **时钟**: HSE 12MHz → PLL 168MHz
 
-### 外设资源与引脚映射
+### 外设引脚映射
 
 | 外设 | 引脚 | 用途 |
 |------|------|------|
-| CAN1 | PD0/PD1 | 机械臂 DM 电机 (`ARM_CAN=hcan1`) + YV 电磁阀刷新 |
-| CAN2 | PB5/PB6 | 底盘 4×DM4310 电机 (`chassis_hcan=hcan2`, MIT 模式, 1Mbps) |
-| SPI1 + PA4(CS) | PA5/PA6/PA7 | MCP2515 → hcan5 (`grabbing_can`)，夹取/升降机构 |
-| SPI2 + PB12(CS) | PB13/PB14/PB15 | MCP2515 → hcan4 (预留电磁阀) |
-| SPI3 + PA15(CS) | PC10/PC11/PC12 | MCP2515 预留，当前夹取机构改用 SPI1+PA4 初始化 hcan5 |
-| UART4 | PA0(TX)/PA1(RX) | SBUS 遥控器接收 (100kbps, 9E2, DMA) |
-| USART1 | PA9(TX)/PA10(RX) | 调试串口 (115200-8N1) |
-| USART2 | PD5(TX)/PD6(RX) | 通信串口 (115200-8N1) |
-| TIM1_CH1 | PE9 | PWM 输出 (预留) |
-| GPIOE[0:7] | PE0~PE7 | LED 流水灯 (开漏输出) |
-| KEY1 | PB2 | 按键输入 (下拉) |
+| CAN1 | PD0/PD1 | 抬升×4 + 抓取×2 + YV 电磁阀刷新 (CAN ID 0x300) |
+| CAN2 | PB5/PB6 | 双机械臂 DM 电机 ×4 |
+| UART4 | PA0(TX)/PA1(RX) | SBUS 遥控器 (100kbps, 9E2, DMA 循环) |
+| GPIOE[0:7] | PE0~PE7 | LED 流水灯 |
+| SPI1/2/3 | — | MCP2515 预留 |
+| USART1 | PA9/PA10 | 调试串口 (115200-8N1) |
+| KEY1 | PB2 | 按键输入 |
 
 ### 执行器
 
-| 执行器 | 数量 | CAN ID | 控制总线 | 协议 |
-|--------|------|--------|----------|------|
-| DM4310 (FR) | 1 | 0x02 | CAN2 | MIT 速度模式 |
-| DM4310 (FL) | 1 | 0x03 | CAN2 | MIT 速度模式 |
-| DM4310 (BR) | 1 | 0x01 | CAN2 | MIT 速度模式 |
-| DM4310 (BL) | 1 | 0x04 | CAN2 | MIT 速度模式 |
-| 机械臂 DM | 4 | 0x01~0x04 | CAN1 | 位置模式 |
-| 夹取/升降 DM | 5 | 0x01~0x05 | hcan5(SPI1+PA4) | 位置/MIT 控制 |
+| 执行器 | 数量 | CAN ID | 总线 | 型号 | 模式 |
+|--------|------|--------|------|------|------|
+| 抬升电机 | 4 | 1~4 | CAN1 | DM4340 | 位置-速度 |
+| 左臂根部 | 1 | 1 | CAN2 | DM4340 | 位置 |
+| 左臂末端 | 1 | 2 | CAN2 | DM4310 | 位置 |
+| 右臂根部 | 1 | 3 | CAN2 | DM4340 | 位置 |
+| 右臂末端 | 1 | 4 | CAN2 | DM4310 | 位置 |
+| 翻转电机 | 1 | 5 | CAN1 | DM4310 | 位置-速度 |
+| 齿条电机 | 1 | 6 | CAN1 | DM2325 | 位置-速度 |
+| 电磁阀 | 3 | — | CAN1 0x300 | YV1(左吸盘) YV2(右吸盘) YV3(夹爪) | — |
 
 ---
 
@@ -59,185 +57,116 @@ R1 当前采用**四轮麦克纳姆轮底盘 + 机械臂 + 夹取/升降机构**
 
 ```
 R1/upperpart/
-├── .gitignore                  # Git 忽略规则
-├── A_board.ioc                 # CubeMX 引脚配置
-├── CLAUDE.md                   # AI 操作备忘
-├── README.md                   # 中文项目文档
-├── memory_box_short.md         # 短记忆匣（快速参考）
-├── memory_box_long.md          # 长记忆匣（完整上下文）
-├── Core/Src/                   # CubeMX 生成 + 主逻辑
-│   ├── main.c                  # 主程序：任务创建 + 控制逻辑
-│   ├── freertos.c              # FreeRTOS 初始化
-│   ├── can.c / dma.c / gpio.c / spi.c / tim.c / usart.c
-│   ├── stm32f4xx_it.c          # 中断服务
-│   └── stm32f4xx_hal_msp.c     # HAL MSP 初始化
-├── Lib/                        # 应用层库
-│   ├── sbus_set.c/h            # SBUS 遥控器解码 (UART4 DMA)
-│   ├── bsp_can.c/h             # CAN 滤波器初始化
-│   ├── mcp2515.c/h + consts.h  # MCP2515 SPI-CAN 驱动
-│   ├── can_receive.c/h         # CAN 数据接收
-│   ├── motor_control.c/h       # DM/YUN 电机 MIT/位置模式控制
-│   ├── chassis.c/h             # 麦轮底盘逆运动学
-│   ├── pid.c/h                 # PID 控制器
-│   ├── solenoid_valves.c/h     # 电磁阀控制宏 YV1~YV10
-│   ├── arm.c/h                 # 机械臂关节控制 + 3D/2D IK
-│   └── grabbing.c/h            # 夹取/升降机构控制
-├── Doc/                        # 文档
-├── Drivers/                    # STM32 HAL + CMSIS
-├── Middlewares/                # FreeRTOS 源码
-└── MDK-ARM/                    # Keil 工程文件 (A_board.uvprojx)
+├── Core/Src/main.c              # 主程序: 锁车 + SBUS调度 + 任务创建
+├── Lib/
+│   ├── sbus_set.c/h             # SBUS DMA循环接收 + 帧解析
+│   ├── dm_motor.c/h             # 达妙电机 CAN 驱动库
+│   ├── lift.c/h                 # 抬升模块 (状态机 + 50Hz控制)
+│   ├── arm.c/h                  # 双机械臂模块 (UP/DOWN状态机 + 限幅)
+│   ├── grab.c/h                 # 抓取模块 (6步工序状态机)
+│   ├── solenoid_valves.c/h      # 电磁阀 YV1~YV10
+│   ├── bsp_can.c/h              # CAN 滤波器
+│   ├── can_receive.c/h          # CAN 接收回调
+│   ├── mcp2515.c/h              # MCP2515 SPI-CAN
+│   └── pid.c/h                  # PID (预留)
+├── Doc/                         # 文档
+├── Drivers/ / Middlewares/      # HAL + FreeRTOS
+└── MDK-ARM/                     # Keil 工程
 ```
 
 ### FreeRTOS 任务
 
-| 任务 | 周期 | 栈(words) | 优先级 | 功能 |
-|------|------|-----------|--------|------|
-| `start_task` | 一次性 | 256 | 0 | 初始化 SBUS + CAN 滤波器 + grabbing MCP2515，创建 3 个子任务后自销毁 |
-| `led_task` | 100/200ms | 128 | 0 | GPIOE[0:7] 流水灯 (使能时 200ms，失能时 100ms) |
-| `sbus_task` | 10ms | 512 | 0 | SBUS 解码 + CH4 使能 + CH6 模式切换 + 底盘/机械臂/夹取控制 |
-| `chassis_task` | 5ms | 256 | 0 | 麦轮逆运动学计算 + CAN MIT 控制帧发送 |
-
-所有任务优先级相同(0)，FreeRTOS 时间片轮询。
-
-### 启动流程
-
-```
-main()
- ├─ HAL_Init()
- ├─ SystemClock_Config()         # HSE → PLL (168MHz)
- ├─ MX_GPIO / DMA / CAN1/2 / SPI1/2/3 / UART4 / USART1/2 / TIM1 _Init()
- ├─ xTaskCreate(start_task)      # 创建初始化任务
- ├─ MX_FREERTOS_Init()           # FreeRTOS 初始化
- └─ osKernelStart()             # 启动调度器
-
-start_task():
- ├─ sbus_rx_init()               # 启动 UART4 DMA 接收 SBUS
- ├─ can_filter_init()            # 配置 CAN1 滤波器
- ├─ grabbing_init()              # SPI1+PA4 初始化 hcan5 夹取机构 MCP2515
- ├─ xTaskCreate(×3)              # 创建全部子任务
- └─ vTaskDelete(NULL)            # 自销毁
-```
+| 任务 | 周期 | 栈 | 优先级 | 功能 |
+|------|------|-----|--------|------|
+| `start_task` | 一次性 | 256 | 0 | 初始化 → 建子任务 → 自销毁 |
+| `sbus_task` | ~4ms | 512 | 0 | sbus_poll + 锁车 + 模式调度 |
+| `led_task` | 100/200ms | 56 | 0 | LED 流水灯 |
+| `lift_task` | 50Hz | 512 | 0 | 抬升 4×pos_ctrl + YV_flash |
+| `arm_task` | 50Hz | 256 | 0 | 双机械臂 4×pos_ctrl + 限幅 |
+| `grab_task` | 50Hz | 256 | 0 | 抓取 2×pos_ctrl |
 
 ---
 
-## 控制模式
+## 遥控通道分配
 
-### 遥控器规格
+> 物理拨杆与 SBUS 反相: 物理上拨 → ch_low(<650), 物理下拨 → ch_high(>1300)
 
-R1 上下层各有独立 SBUS 接收机，绑定同一遥控器。两块板之间无线路连接，各自独立解析 SBUS 信号。
-
-| 通道 | 控件类型 | 输出范围 | 中位 | 说明 |
-|------|---------|---------|------|------|
-| CH0~CH3 | 摇杆 | 326 ~ 1659 | 992 | 左右/上下 |
-| CH4~CH6 | 3 段拨杆 | 326 / 992 / 1659 | 992 | 上/中/下三段 |
-| CH7 | 2 段拨杆 | 329 / 1659 | — | 上/下两段 |
-| CH8~CH9 | 旋钮 (面板) | 326 ~ 1659 | — | 旋转 |
-| CH10~CH11 | 旋钮 (背面) | 326 ~ 1659 | — | 旋转 |
-
-> SBUS 帧: UART4, 100kbps 9E2 DMA, 25 字节/帧, 15 通道, 每通道 11-bit (0~2047)。
-
-### 当前通道分配 (2026-06-15 底盘解耦后)
-
-| 通道 | 用途 | 阈值 | 说明 |
+| 通道 | 控件 | 模式 | 功能 |
 |------|------|------|------|
-| CH4 | 主使能 / 锁车 | `>1300` 解锁, `<650` 锁车 | 3 段拨杆上拨解锁，下拨锁车 |
-| CH0~CH3, CH5~CH11 | 预留 | — | 待后续功能分配 |
+| CH4 | 3段拨杆 | 全局 | 中位/下拨=解锁, 上拨=锁车; 中位清零抓取工序 |
+| CH5 | 3段拨杆 | 全局 | 上拨→抓取, 中位→抬升+机械臂, 下拨→未用 |
+| CH6 | 3段拨杆 | CH5中位 | 抬升高度: 下拨19.0 / 中位28.8 / 上拨29.3 |
+| CH6 | 3段拨杆 | CH5上拨 | 3层(上拨): 末端向前; 1~2层(其他): 末端朝地 |
+| CH7 | 2段拨杆 | CH5中位 | 切换选中臂抬起/放下 |
+| CH7 | 2段拨杆 | CH5上拨 | 推进抓取工序 (6步→手动) |
+| CH8 | 旋钮 | 全局 | >1300 左吸盘开 (YV1) |
+| CH9 | 旋钮 | 全局 | >1300 右吸盘开 (YV2) |
+| CH10 | 旋钮 | CH5上拨 | 齿条推进 0~12 |
+| CH11 | 旋钮 | CH5中位 | >1000选左臂, <1000选右臂 |
 
-### 锁车逻辑
+### CH4 锁车
 
-```
-CH4 上拨 (>1300) 且上升沿  →  sys_enabled = true   (解锁)
-CH4 下拨 (<650) 且下降沿   →  sys_enabled = false  (锁车)
-SBUS 断联 >50ms            →  sys_enabled = false  (自动锁车)
-```
-
-> 上下层各自独立锁车/解锁，互不影响。
+- 中位/下拨 + 上升沿 → 解锁, 所有电机使能
+- 上拨 + 下降沿 → 锁车, 所有电机关断
+- 100ms 断联 → 自动锁车
+- 失控保护 (failsafe) → 立刻锁车
 
 ---
 
-## 库模块说明
+## 机械臂
 
-### [sbus_set](Lib/sbus_set.h)
-SBUS 协议解码。`rx_set()` 从 UART4 DMA 缓冲区解析 25 字节为 16 通道值，提供 `Map()` (float) 和 `map()` (int16) 映射函数。
+### 关节限幅 (0=平行地面/同大臂平行)
 
-### [motor_control](Lib/motor_control.h)
-DM 系列电机和云台电机的 CAN 控制协议（当前 main.c 未引用，保留供后续使用）：
-- **MIT 模式**: `dm_mit_ctrl()` 位置/速度/扭矩联合控制
-- **位置模式**: `pos_ctrl()` 位置伺服控制
-- **使能/失能**: `dm_enable()` / `dm_disable()`
+| 关节 | ID | 范围 | 说明 |
+|------|-----|------|------|
+| 左根 | 1 | 0~-1.67 | 0=水平, -1.67=竖起微向后 |
+| 左末 | 2 | 0~-1.57 | 0=顺臂, -1.57=垂直(大臂0时朝地) |
+| 右根 | 3 | 0~1.67 | 0=水平, 1.67=竖起微向后 |
+| 右末 | 4 | 0~1.57 | 0=顺臂, 1.57=垂直(大臂0时朝地) |
 
-### [chassis](Lib/chassis.h)
-4 轮麦克纳姆轮底盘运动学（⚠️ 2026-06-15 上层已解耦底盘，当前 main.c 未引用）。
+- 默认: 竖起 (root=±1.67, tip=0)
+- CH7 切换: CH5 中位时, 选中臂在抬起/放下间切换
+- 放下: root=0, tip 按楼层 (3层向前/1~2层朝地)
+- arm_task 每帧限幅再发送
 
-### [mcp2515](Lib/mcp2515.h) + [mcp2515_consts](Lib/mcp2515_consts.h)
-MCP2515 SPI-CAN 桥接芯片驱动。支持多种速率、标准/扩展帧过滤掩码、3TX+2RX 缓冲。
+## 抓取工序
 
-### [solenoid_valves](Lib/solenoid_valves.h)
-10 路电磁阀 YV1~YV10 的位操作宏（当前 main.c 未引用，保留供后续使用）。
-> **注意**: YV9/YV10 的 flip 操作有 bug：异或时错误地操作了 `[0]` 而非 `[1]`
+CH5 上拨进入, CH7 每次切换推进:
 
-### [pid](Lib/pid.h)
-位置式/增量式 PID 控制器（预留，当前未使用）。
-> **注意**: pid.h 重新定义了 `int8_t`/`uint8_t` 等标准类型，与 `<stdint.h>` 可能冲突
+| 步 | 状态 | 动作 |
+|----|------|------|
+| 0 | 空闲 | 齿条0 翻转0 夹爪关 |
+| 1 | 齿条回零 | 齿条0 翻转0 夹爪关 |
+| 2 | 开夹爪 | YV3(1) |
+| 3 | 翻转取杆 | 翻转→-1.9 |
+| 4 | 关夹爪 | YV3(0) |
+| 5 | 翻回 | 翻转→0 |
+| 6+ | 手动 | CH10控制齿条 0~12 |
 
-### 其他 Lib 模块
-`arm.c/h`、`grabbing.c/h`、`can_receive.c/h`、`bsp_can.c/h` 保留在 Lib 目录中，当前 main.c 未引用，待后续功能开发时重新接入。
+- CH4 中位清零工序状态
+- CH10 始终控制齿条
+- 4310 翻下/翻上速度分离 (6.0/2.0)
 
 ---
 
 ## 安全机制
 
-1. **SBUS 帧校验**: `buf[0]==0x0F && buf[23]==0x00 && buf[24]==0x00`
-2. **SBUS 超时断联** (50ms): 自动失能 + 速度归零
-3. **CH4 边沿检测**: 上升沿使能，下降沿失能 + 安全停车
-4. **遥控信号中位死区**: CH0/CH2/CH3 在 1022~1026 范围内输出零
+1. **SBUS 帧校验**: `buf[0]==0x0F && buf[24]==0x00`
+2. **SBUS 超时断联** (100ms): 自动锁车
+3. **失控保护**: 接收机 failsafe 标志 → 立刻锁车
+4. **CH4 边沿检测**: 上升沿解锁, 下降沿锁车
+5. **机械臂限幅**: arm_task 每帧钳位到关节范围
+6. **断联不重置 last_ch4**: 重连后不会误触发解锁
 
----
+## 已知问题
 
-## 调试接口
-
-| 接口 | 引脚 | 参数 | 用途 |
-|------|------|------|------|
-| USART1 | PA9/PA10 | 115200-8N1 | 调试日志 |
-| USART2 | PD5/PD6 | 115200-8N1 | 上位机通信 |
-| SWD | PA13/PA14 | — | J-Link / ST-Link |
-
----
-
-## 已知问题 / TODO
-
-1. **pid.h 类型重定义** — 重新声明 `int8_t`/`uint8_t` 等，与标准库可能冲突
-2. **YV9/YV10 flip bug** — `solenoid_valves.h:68,74` 异或操作写错数组下标
-3. **机械臂/夹取功能待恢复** — `arm.c/h`、`grabbing.c/h` 保留在 Lib 目录，待硬件方案确定后重新接入
-4. **旧文件残留** — `chassis_ik.o`, `three_steering_wheel_ik.o`, `four_steering_wheel_ik.o`, `upstairs.o` 为旧版本编译残留
-
----
-
-## 2026-06-15 更新：底盘解耦 + 骨架清理 + 遥控器参数修正
-
-上下层电源分离，底盘控制完全移交给下层。上层 main.c 清理为最小骨架：
-
-- **移除**: `chassis_task`、底盘运动学、机械臂 IK、夹取状态机、CH6 三段模式切换、吸盘 YV1 控制
-- **保留**: LED 流水灯、SBUS 解码 + 50ms 断联保护、CH4 锁车/解锁
-- **阈值修正**: `ch_high()` 从 `>1700` 改为 `>1300`，匹配实际遥控器 3 段拨杆量程 (326/992/1659)
-- **新增**: `ch_low()` `<650`、`ch_mid()` `650~1300`
-
-### 修正后遥控器参数
-
-| 通道 | 控件 | 量程 | 阈值 (上层) |
-|------|------|------|------------|
-| CH0~CH3 | 摇杆 | 326~1659 (中位 992) | — |
-| CH4~CH6 | 3 段拨杆 | 326 / 992 / 1659 | high>1300, low<650, mid 650~1300 |
-| CH7 | 2 段拨杆 | 329 / 1659 | high>1300, low<650 |
-| CH8~CH11 | 旋钮 | 326~1659 | — |
-
-> 上下层各有独立接收机，无线路连接。CH4 锁车各自独立。
+1. **pid.h 类型重定义** — 与 `<stdint.h>` 可能冲突
+2. **YV9/YV10 flip bug** — `solenoid_valves.h` 异或写错数组下标
 
 ## 编译信息
 
-- 2026-05-18 build: 0 errors, 0 warnings, Flash 21192 bytes, RAM 23520 bytes (清理前)
 - 编译器: ARMCLANG V6.23 (AC6), C99 + GNU extensions
-- 产物: `MDK-ARM/A_board/A_board.hex` / `MDK-ARM/A_board/A_board.axf`
+- 产物: `MDK-ARM/A_board/A_board.hex` / `.axf`
 
 ---
 
@@ -249,6 +178,3 @@ MCP2515 SPI-CAN 桥接芯片驱动。支持多种速率、标准/扩展帧过滤
 | R2 主控 | [../../R2/](../../R2/) — 自制A板, 同款MCU |
 | 短记忆匣 | [memory_box_short.md](memory_box_short.md) |
 | 长记忆匣 | [memory_box_long.md](memory_box_long.md) |
-| Keil 工程 | [MDK-ARM/A_board.uvprojx](MDK-ARM/A_board.uvprojx) |
-
-> ⚠️ 本 README 为手动维护，部分过时信息以代码实际状态为准。最新变更摘要见 `memory_box_short.md`，详细上下文见 `memory_box_long.md`。

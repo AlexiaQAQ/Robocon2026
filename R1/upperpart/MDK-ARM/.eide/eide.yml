@@ -92,6 +92,12 @@ virtualFolder:
         - path: ../Lib/solenoid_valves.h
         - path: ../Lib/dm_motor.c
         - path: ../Lib/dm_motor.h
+        - path: ../Lib/arm.c
+        - path: ../Lib/arm.h
+        - path: ../Lib/grab.c
+        - path: ../Lib/grab.h
+        - path: ../Lib/lift.c
+        - path: ../Lib/lift.h
       folders: []
     - name: ::CMSIS
       files: []

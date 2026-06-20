@@ -23,6 +23,7 @@ static const dm_range_t dm_range_table[] = {
 	[DMH3510]     = { 12.5f,  280.0f,200.0f },
 	[DMH6215]     = { 12.5f,  45.0f,  10.0f },
 	[DMG6220]     = { 12.5f,  45.0f,  10.0f },
+	[DM_2325]     = { 12.5f, 200.0f,  10.0f }, /* 同 DM3519 */
     [DM_CUSTOM]   = { 12.5f,  30.0f,  10.0f },
 };
 

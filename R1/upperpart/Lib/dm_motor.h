@@ -30,6 +30,7 @@ typedef enum {
     DMH3510,
     DMH6215,
     DMG6220,
+    DM_2325,
     DM_CUSTOM       /* 用户自行设置范围, 默认同 DM_4310 */
 } dm_model_t;
 

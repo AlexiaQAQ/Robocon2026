@@ -1825,6 +1825,36 @@
               <FileType>5</FileType>
               <FilePath>..\Lib\dm_motor.h</FilePath>
             </File>
+            <File>
+              <FileName>arm.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Lib\arm.c</FilePath>
+            </File>
+            <File>
+              <FileName>arm.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Lib\arm.h</FilePath>
+            </File>
+            <File>
+              <FileName>grab.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Lib\grab.c</FilePath>
+            </File>
+            <File>
+              <FileName>grab.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Lib\grab.h</FilePath>
+            </File>
+            <File>
+              <FileName>lift.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Lib\lift.c</FilePath>
+            </File>
+            <File>
+              <FileName>lift.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Lib\lift.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
