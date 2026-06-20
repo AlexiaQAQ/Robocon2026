@@ -55,10 +55,10 @@ arm_task 每帧限幅夹后发送
 
 ### 抓取 (grab.c)
 ```
-G_IDLE(0) → G_RACK_ZERO(1) → G_CLAW_OPEN(2) → G_FLIP_DOWN(3)
-→ G_CLAW_CLOSE(4) → G_FLIP_BACK(5) → G_MANUAL(6+)
-CH5上拨+CH7边沿推进
-CH10始终控制齿条
+G_IDLE(0) → … → G_FLIP_BACK(5) → G_LIFT_RISE(6) ↔ G_LIFT_RETURN(7)
+CH5上拨+CH7边沿推进, 步骤6/7循环切换
+CH10始终控制齿条, CH1增量微调(推一次±0.5/累积±3.0/需回中)
+G_LIFT_RISE: 抬升→10.0+CH1微调, G_LIFT_RETURN: 抬升→0.2
 4310速度: 翻下FLIP_DOWN_SPEED, 翻上FLIP_UP_SPEED
 ```
 
@@ -85,6 +85,13 @@ CH10始终控制齿条
 - CAN邮箱保护: arm_enable在sys_enabled=true之前完成
 
 ## 6. 变更记录
+
+### 2026-06-20 — R2对接抬升 + CH1增量微调
+- 抓取工序新增 G_LIFT_RISE(6) ↔ G_LIFT_RETURN(7) 循环切换
+- CH7 步骤5→6: 抬升→10.0 (R2对接), 6→7: 抬升→0.2, 7↩6 循环
+- grab_lift_target() 对外暴露, main.c 抓取模式调用此函数
+- CH1 摇杆增量微调: 边沿触发 ±0.5/次, 累积最大±3.0, 需回中再推
+- arm.c 关节目标位置统一改为宏
 
 ### 2026-06-19 — 模块化重构
 - 拆分 lift.c/h, arm.c/h, grab.c/h, 各带状态机

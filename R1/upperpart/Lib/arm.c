@@ -5,15 +5,25 @@
 #define ARM_CAN    hcan2
 #define ARM_SPEED  0.5f
 
-/* 限幅 */
-#define L_ROOT_MIN  -1.67f
+/* 关节限幅 */
+#define L_ROOT_MIN  -1.66f
 #define L_ROOT_MAX   0.0f
 #define L_TIP_MIN   -1.57f
 #define L_TIP_MAX    0.0f
 #define R_ROOT_MIN   0.0f
-#define R_ROOT_MAX   1.67f
+#define R_ROOT_MAX   1.66f
 #define R_TIP_MIN    0.0f
 #define R_TIP_MAX    1.57f
+
+/* 目标位置 */
+#define L_ROOT_UP    -1.66f   /* 左根竖起 */
+#define L_ROOT_DOWN   0.0f    /* 左根水平 */
+#define L_TIP_UP      0.0f    /* 左末顺臂 */
+#define L_TIP_DOWN   -1.57f   /* 左末朝地 (1~2层) */
+#define R_ROOT_UP     1.66f   /* 右根竖起 */
+#define R_ROOT_DOWN   0.0f    /* 右根水平 */
+#define R_TIP_UP      0.0f    /* 右末顺臂 */
+#define R_TIP_DOWN    1.57f   /* 右末朝地 (1~2层) */
 
 static motor_t arm_motor[4];    /* [0]左根4340 [1]左末4310 [2]右根4340 [3]右末4310 */
 
@@ -23,8 +33,8 @@ static arm_state_t g_arm_L = ARM_UP;   /* 左臂 */
 static arm_state_t g_arm_R = ARM_UP;   /* 右臂 */
 
 /* 目标值 */
-static float g_L_root = -1.67f, g_L_tip = 0.0f;
-static float g_R_root =  1.67f, g_R_tip = 0.0f;
+static float g_L_root = L_ROOT_UP, g_L_tip = L_TIP_UP;
+static float g_R_root = R_ROOT_UP, g_R_tip = R_TIP_UP;
 
 static bool g_last_ch7 = false;        /* CH7 边沿 */
 static bool g_first  = true;            /* 首次进入, 同步不切换 */
@@ -86,25 +96,25 @@ void arm_update(SBUS_t *sbus, bool select_left, bool ch6_high)
     /* 左臂目标 */
     if(g_arm_L == ARM_DOWN)
     {
-        g_L_root = 0.0f;
-        g_L_tip  = ch6_high ? 0.0f : -1.57f;   /* 3层末端向前, 1~2层朝地 */
+        g_L_root = L_ROOT_DOWN;
+        g_L_tip  = ch6_high ? L_TIP_UP : L_TIP_DOWN; /* 3层向前, 1~2层朝地 */
     }
     else  /* ARM_UP */
     {
-        g_L_root = -1.67f;
-        g_L_tip  = 0.0f;
+        g_L_root = L_ROOT_UP;
+        g_L_tip  = L_TIP_UP;
     }
 
     /* 右臂目标 */
     if(g_arm_R == ARM_DOWN)
     {
-        g_R_root = 0.0f;
-        g_R_tip  = ch6_high ? 0.0f : 1.57f;
+        g_R_root = R_ROOT_DOWN;
+        g_R_tip  = ch6_high ? R_TIP_UP : R_TIP_DOWN;
     }
     else
     {
-        g_R_root = 1.67f;
-        g_R_tip  = 0.0f;
+        g_R_root = R_ROOT_UP;
+        g_R_tip  = R_TIP_UP;
     }
 }
 

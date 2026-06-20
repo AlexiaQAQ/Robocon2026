@@ -10,7 +10,7 @@ STM32F407VET6 + FreeRTOS, 自制A板。抬升平台 + 双机械臂 + 抓取机�
 | SBUS | sbus_set.c | DMA循环 + 帧头尾校验 + failsafe检测 |
 | 抬升 | lift.c | 4×DM4340, 回零/高度(CH6), 50Hz, YV_flash |
 | 机械臂 | arm.c | 4×DM(4340+4310), UP/DOWN状态机, CH11选臂+CH7切换 |
-| 抓取 | grab.c | 2×(4310+2325), 6步工序+CH10齿条, YV3 |
+| 抓取 | grab.c | 2×(4310+2325), 8步工序+6↔7循环切换对接/初始高度, YV3 |
 | 吸盘 | main→solenoid | CH8→YV1, CH9→YV2 |
 | 锁车 | main.c | CH4边沿, 100ms断联, failsafe立刻锁 |
 

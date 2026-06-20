@@ -15,6 +15,9 @@ void grab_update(SBUS_t *sbus);
 /* CH5离开抓取模式时调用 → 复位 */
 void grab_reset(void);
 
+/* 抓取模式下抬升目标: G_LIFT_RISE→对接基准+CH1微调, 其余→0.2 */
+float grab_lift_target(void);
+
 void grab_task(void *parameter);       /* 50Hz CAN发送 */
 
 #endif

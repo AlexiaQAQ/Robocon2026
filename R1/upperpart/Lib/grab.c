@@ -8,6 +8,9 @@
 #define RACK_SPEED  6.0f           /* 2325齿条 */
 #define FLIP_DOWN_SPEED  6.0f      /* 4310翻下去 */
 #define FLIP_UP_SPEED    2.0f      /* 4310翻上来 */
+#define LIFT_DOCK_BASE   10.0f     /* 对接基准高度 */
+#define LIFT_FINE_STEP    0.05f     /* CH1每次微调步长 */
+#define LIFT_FINE_MAX     3.0f     /* CH1微调最大累积 */
 
 static motor_t grab_motor[2];       /* [0]=4310翻转 ID5, [1]=2325齿条 ID6 */
 
@@ -19,7 +22,8 @@ typedef enum {
     G_FLIP_DOWN,     /* 3: 翻转取杆 */
     G_CLAW_CLOSE,    /* 4: 关夹爪抓杆 */
     G_FLIP_BACK,     /* 5: 翻回 */
-    G_MANUAL,        /* 6+: CH10手动控制齿条 */
+    G_LIFT_RISE,     /* 6: 抬升→10 (R2对接) + CH10手动 */
+    G_LIFT_RETURN,   /* 7: 抬升→0.2 (初始高度) + CH10手动, CH7拨回步骤6 */
 } grab_step_t;
 
 static grab_step_t g_step = G_IDLE;
@@ -28,6 +32,9 @@ static bool g_first    = true;      /* 首次进入同步 */
 static float g_rack = 0.0f;         /* 2325齿条目标 */
 static float g_flip = 0.0f;         /* 4310翻转目标 */
 static float g_flip_speed = FLIP_UP_SPEED;
+static float g_ch1_offset = 0.0f;   /* CH1摇杆微调偏移 */
+static int   g_ch1_zone  = 0;       /* CH1当前区域: -1低/0中/1高 */
+static bool  g_ch1_sync  = true;    /* CH1首次同步 */
 
 extern bool g_sys_enabled;
 
@@ -53,11 +60,13 @@ void grab_disable(void)
 
 void grab_reset(void)
 {
-    g_step  = G_IDLE;
-    g_rack  = 0.0f;
-    g_flip  = 0.0f;
+    g_step       = G_IDLE;
+    g_rack       = 0.0f;
+    g_flip       = 0.0f;
+    g_ch1_offset = 0.0f;
     YV3(0);
-    g_first = true;      /* 下次 grab_update 时重新同步 CH7 */
+    g_first     = true;   /* 下次 grab_update 时重新同步 CH7 */
+    g_ch1_sync  = true;   /* 下次 grab_update 时重新同步 CH1 */
 }
 
 /* ================================================================ */
@@ -71,11 +80,30 @@ void grab_update(SBUS_t *sbus)
     else if(ch7 != g_last_ch7)
     {
         g_last_ch7 = ch7;
-        if(g_step < G_MANUAL) g_step++;
+        if(g_step < G_LIFT_RISE)      g_step++;                 /* 步骤0→5 线性 */
+        else if(g_step == G_LIFT_RISE) g_step = G_LIFT_RETURN;  /* 6→7 切换 */
+        else                           g_step = G_LIFT_RISE;     /* 7→6 切换 */
     }
 
     /* CH10 始终控制齿条 */
     g_rack = Map((float)sbus->ch[10], 326.0f, 1659.0f, 0.0f, 12.0f);
+
+    /* CH1 摇杆增量微调 (仅步骤6+生效, 边沿触发, 需回中才能再次调节) */
+    if(g_step >= G_LIFT_RISE)
+    {
+        float ch1 = (float)sbus->ch[1];
+        int zone = (ch1 > 1012.0f) ? 1 : (ch1 < 972.0f) ? -1 : 0;
+
+        if(g_ch1_sync) { g_ch1_sync = false; g_ch1_zone = zone; }
+        else if(zone != g_ch1_zone)
+        {
+            if(zone == 1)       g_ch1_offset -= LIFT_FINE_STEP;
+            else if(zone == -1) g_ch1_offset += LIFT_FINE_STEP;
+            g_ch1_zone = zone;
+        }
+        if(g_ch1_offset >  LIFT_FINE_MAX) g_ch1_offset =  LIFT_FINE_MAX;
+        if(g_ch1_offset < -LIFT_FINE_MAX) g_ch1_offset = -LIFT_FINE_MAX;
+    }
 
     switch(g_step)
     {
@@ -97,9 +125,21 @@ void grab_update(SBUS_t *sbus)
         case G_FLIP_BACK:
             g_flip = 0.0f; g_flip_speed = FLIP_UP_SPEED;  break;
 
-        default:  /* G_MANUAL+ */
+        case G_LIFT_RISE:     /* 对接高度 + CH10手动 */
+        case G_LIFT_RETURN:   /* 初始高度 + CH10手动 */
+            break;
+
+        default:
             break;
     }
+}
+
+/* ================================================================ */
+
+/* 抓取模式下抬升目标: G_LIFT_RISE→对接基准+CH1微调, 其余→0.2 */
+float grab_lift_target(void)
+{
+    return (g_step == G_LIFT_RISE) ? (LIFT_DOCK_BASE + g_ch1_offset) : 0.2f;
 }
 
 /* ================================================================ */

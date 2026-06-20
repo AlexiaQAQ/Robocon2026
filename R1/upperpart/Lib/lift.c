@@ -9,9 +9,10 @@ extern bool g_sys_enabled;
 #define LIFT_CAN    hcan1
 #define LIFT_SPEED  4.0f
 #define LIFT_RETURN_SPEED  2.0f
+#define LIFT_RETURN_TARGET 0.2f    /* 回零高度 */
 
 static motor_t  lift_motor[4];
-static float    lift_target = 0.2f;      /* 0.2 = 回零 */
+static float    lift_target = LIFT_RETURN_TARGET;
 
 void lift_init(void)
 {
@@ -48,7 +49,7 @@ void lift_task(void *parameter)
     {
         if(g_sys_enabled)
         {
-            float speed = (lift_target == 0.2f) ? LIFT_RETURN_SPEED : LIFT_SPEED;
+            float speed = (lift_target == LIFT_RETURN_TARGET) ? LIFT_RETURN_SPEED : LIFT_SPEED;
             dm_pos_ctrl(&LIFT_CAN, 1, -lift_target, speed); vTaskDelay(2);
             dm_pos_ctrl(&LIFT_CAN, 2,  lift_target, speed); vTaskDelay(2);
             dm_pos_ctrl(&LIFT_CAN, 3, -lift_target, speed); vTaskDelay(2);

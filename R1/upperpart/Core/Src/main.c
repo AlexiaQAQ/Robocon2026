@@ -44,6 +44,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SBUS_TIMEOUT_MS 100
+#define LIFT_H_3F   29.3f   /* 抬升 3层 */
+#define LIFT_H_2F   28.8f   /* 抬升 2层 (中位) */
+#define LIFT_H_1F   19.0f   /* 抬升 1层 */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -138,16 +141,16 @@ void sbus_task(void *parameter)
             last_sbus_tick = xTaskGetTickCount();
             system_enable_handler();
 
-            if(ch_low(5))       /* 抓取模式 (含抬升回零) */
+            if(ch_low(5))       /* 抓取模式 (含抬升回零/R2对接) */
             {
-                lift_update(0.2f);
+                lift_update(grab_lift_target());
                 grab_update(&sbus_ch);
             }
             else if(ch_mid(5))  /* 抬升高度 + 机械臂 */
             {
-                if(ch_high(6))       lift_update(29.3f);
-                else if(ch_low(6))   lift_update(19.0f);
-                else                 lift_update(28.8f);
+                if(ch_high(6))       lift_update(LIFT_H_3F);
+                else if(ch_low(6))   lift_update(LIFT_H_1F);
+                else                 lift_update(LIFT_H_2F);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
                 arm_update(&sbus_ch, sel, ch_high(6));
