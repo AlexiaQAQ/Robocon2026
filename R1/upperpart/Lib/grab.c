@@ -85,9 +85,6 @@ void grab_update(SBUS_t *sbus)
         else                           g_step = G_LIFT_RISE;     /* 7→6 切换 */
     }
 
-    /* CH10 始终控制齿条 */
-    g_rack = Map((float)sbus->ch[10], 326.0f, 1659.0f, 0.0f, 12.0f);
-
     /* CH1 摇杆增量微调 (仅步骤6+生效, 边沿触发, 需回中才能再次调节) */
     if(g_step >= G_LIFT_RISE)
     {
@@ -140,6 +137,14 @@ void grab_update(SBUS_t *sbus)
 float grab_lift_target(void)
 {
     return (g_step == G_LIFT_RISE) ? (LIFT_DOCK_BASE + g_ch1_offset) : 0.2f;
+}
+
+/* ================================================================ */
+
+/* CH10 全局齿条控制 (无模式限制) */
+void grab_update_rack(uint16_t ch10)
+{
+    g_rack = Map((float)ch10, 326.0f, 1659.0f, 0.0f, 12.0f);
 }
 
 /* ================================================================ */

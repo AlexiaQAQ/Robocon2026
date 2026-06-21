@@ -10,6 +10,8 @@ extern bool g_sys_enabled;
 #define LIFT_SPEED  4.0f
 #define LIFT_RETURN_SPEED  2.0f
 #define LIFT_RETURN_TARGET 0.2f    /* 回零高度 */
+#define LIFT_MAX    29.0f          /* 抬升硬限幅上限 */
+#define LIFT_MIN     0.2f          /* 抬升硬限幅下限 */
 
 static motor_t  lift_motor[4];
 static float    lift_target = LIFT_RETURN_TARGET;
@@ -49,11 +51,16 @@ void lift_task(void *parameter)
     {
         if(g_sys_enabled)
         {
+            /* 硬限幅保护 */
+            float target = lift_target;
+            if(target > LIFT_MAX) target = LIFT_MAX;
+            if(target < LIFT_MIN) target = LIFT_MIN;
+
             float speed = (lift_target == LIFT_RETURN_TARGET) ? LIFT_RETURN_SPEED : LIFT_SPEED;
-            dm_pos_ctrl(&LIFT_CAN, 1, -lift_target, speed); vTaskDelay(2);
-            dm_pos_ctrl(&LIFT_CAN, 2,  lift_target, speed); vTaskDelay(2);
-            dm_pos_ctrl(&LIFT_CAN, 3, -lift_target, speed); vTaskDelay(2);
-            dm_pos_ctrl(&LIFT_CAN, 4,  lift_target, speed); vTaskDelay(2);
+            dm_pos_ctrl(&LIFT_CAN, 1, -target, speed); vTaskDelay(2);
+            dm_pos_ctrl(&LIFT_CAN, 2,  target, speed); vTaskDelay(2);
+            dm_pos_ctrl(&LIFT_CAN, 3, -target, speed); vTaskDelay(2);
+            dm_pos_ctrl(&LIFT_CAN, 4,  target, speed); vTaskDelay(2);
             YV_flash(&LIFT_CAN);   /* 电磁阀刷新 */
         }
         vTaskDelay(20);

@@ -37,18 +37,19 @@ type: project
 
 ## 3. 状态机
 
-### 抬升 (lift.c)
+### 抬升 (lift.c + main.c CH1微调)
 ```
-IDLE → 收目标值 → 50Hz发送pos_ctrl
-速度: 目标=0.2时 RETRUN_SPEED(2.0), 否则 LIFT_SPEED(4.0)
+CH5中位: CH6选基准高度 + CH1连续微调(±3.0) → lift_update(base+offset)
+CH5上拨: grab_lift_target() → 0.2(回零) / 10.0±增量偏移(对接)
+50Hz发送pos_ctrl, 速度: 目标=0.2时 RETURN_SPEED(2.0), 否则 LIFT_SPEED(4.0)
 ```
 
 ### 机械臂 (arm.c)
 ```
 每臂独立: ARM_UP ↔ ARM_DOWN
-CH5中位+CH11选臂+CH7边沿 → 切换状态
+CH5中位/下拨 + CH11选臂 + CH7边沿 → 切换状态
   UP:   root=±1.67, tip=0 (竖起)
-  DOWN: root=0, tip=楼层决定
+  DOWN: root=0, 中位→tip按楼层, 下拨→tip朝前(放方块进九宫格)
 arm_task 每帧限幅夹后发送
 首次进入 arm_update 仅同步CH7, 不切换
 ```
@@ -86,12 +87,22 @@ G_LIFT_RISE: 抬升→10.0+CH1微调, G_LIFT_RETURN: 抬升→0.2
 
 ## 6. 变更记录
 
+### 2026-06-21 — 放方块模式 + CH1连续微调 + CH10全局
+- CH5 下拨新增放方块模式: 抬升→15.0, 机械臂末端朝前(进九宫格)
+- CH1 抬升模式改为连续微调(推杆偏移/松手归零), 抓取模式保持增量
+- CH10 齿条改为全局控制(所有模式)
+- 抬升高度/CH1微调参数统一宏化到 main.c
+- CH1 增量微调推广到抬升模式(CH5中位): CH6基准高度 + CH1微调
+- CH10 齿条改为全局控制(所有模式), grab_update_rack()独立
+- 吸盘 YV1/YV2 全局控制(不变)
+- 抬升高度/CH1微调参数统一宏化到 main.c
+
 ### 2026-06-20 — R2对接抬升 + CH1增量微调
 - 抓取工序新增 G_LIFT_RISE(6) ↔ G_LIFT_RETURN(7) 循环切换
 - CH7 步骤5→6: 抬升→10.0 (R2对接), 6→7: 抬升→0.2, 7↩6 循环
 - grab_lift_target() 对外暴露, main.c 抓取模式调用此函数
-- CH1 摇杆增量微调: 边沿触发 ±0.5/次, 累积最大±3.0, 需回中再推
-- arm.c 关节目标位置统一改为宏
+- CH1 摇杆增量微调: 边沿触发, 累积最大±3.0, 需回中再推
+- arm.c 关节目标位置 + lift.c 回零高度 + main.c 楼层高度 统一宏化
 
 ### 2026-06-19 — 模块化重构
 - 拆分 lift.c/h, arm.c/h, grab.c/h, 各带状态机

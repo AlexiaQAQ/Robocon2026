@@ -36,8 +36,8 @@ static arm_state_t g_arm_R = ARM_UP;   /* 右臂 */
 static float g_L_root = L_ROOT_UP, g_L_tip = L_TIP_UP;
 static float g_R_root = R_ROOT_UP, g_R_tip = R_TIP_UP;
 
-static bool g_last_ch7 = false;        /* CH7 边沿 */
-static bool g_first  = true;            /* 首次进入, 同步不切换 */
+static bool     g_last_ch7      = false; /* CH7 边沿 */
+static uint32_t g_arm_last_tick = 0;     /* 上次调用tick, 检测跨模式断档 */
 
 extern bool g_sys_enabled;
 
@@ -57,7 +57,6 @@ void arm_init(void)
     dm_init(&arm_motor[1], 2, DM_MODE_POS, DM_4310);
     dm_init(&arm_motor[2], 3, DM_MODE_POS, DM_4340);
     dm_init(&arm_motor[3], 4, DM_MODE_POS, DM_4310);
-    g_first = true;   /* 下次 arm_update 时同步 CH7 */
 }
 
 void arm_enable(void)
@@ -81,16 +80,27 @@ void arm_disable(void)
 void arm_update(SBUS_t *sbus, bool select_left, bool ch6_high)
 {
     /* CH7 边沿 → 切换选中臂状态 */
+    uint32_t now = xTaskGetTickCount();
     bool ch7 = (sbus->ch[7] < 650);     /* 物理上拨=ch_low */
 
-    if(g_first) { g_first = false; g_last_ch7 = ch7; }  /* 首帧仅同步, 不切换 */
+    /* 距上次调用超过50ms → 跨模式断档, 仅同步不切换 */
+    if((now - g_arm_last_tick) > pdMS_TO_TICKS(50))
+    {
+        g_last_ch7 = ch7;
+        g_arm_last_tick = now;
+    }
     else if(ch7 != g_last_ch7)
     {
         g_last_ch7 = ch7;
+        g_arm_last_tick = now;
         if(select_left)
             g_arm_L = (g_arm_L == ARM_UP) ? ARM_DOWN : ARM_UP;
         else
             g_arm_R = (g_arm_R == ARM_UP) ? ARM_DOWN : ARM_UP;
+    }
+    else
+    {
+        g_arm_last_tick = now;
     }
 
     /* 左臂目标 */

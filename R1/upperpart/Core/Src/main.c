@@ -44,9 +44,11 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SBUS_TIMEOUT_MS 100
-#define LIFT_H_3F   29.3f   /* 抬升 3层 */
+#define LIFT_H_3F   25.0f   /* 抬升 3层 */
 #define LIFT_H_2F   28.8f   /* 抬升 2层 (中位) */
 #define LIFT_H_1F   19.0f   /* 抬升 1层 */
+#define LIFT_H_PLACE 15.0f  /* 放方块高度 */
+#define CH1_FINE_MAX   3.0f  /* CH1连续微调最大偏移 */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -148,17 +150,30 @@ void sbus_task(void *parameter)
             }
             else if(ch_mid(5))  /* 抬升高度 + 机械臂 */
             {
-                if(ch_high(6))       lift_update(LIFT_H_3F);
-                else if(ch_low(6))   lift_update(LIFT_H_1F);
-                else                 lift_update(LIFT_H_2F);
+                /* CH1 摇杆连续微调抬升 (中位死区±20) */
+                float ch1 = (float)sbus_ch.ch[1];
+                float offset = 0.0f;
+                if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_FINE_MAX);
+                else if (ch1 < 972.0f)  offset =  Map(ch1,  972.0f,  326.0f, 0.0f, CH1_FINE_MAX);
+
+                float base = ch_high(6) ? LIFT_H_3F :
+                             ch_low(6)  ? LIFT_H_1F : LIFT_H_2F;
+                lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
                 arm_update(&sbus_ch, sel, ch_high(6));
             }
+            else if(ch_high(5)) /* 放方块模式 (抬升15 + 机械臂末端朝前) */
+            {
+                lift_update(LIFT_H_PLACE);
+                bool sel = (sbus_ch.ch[11] > 1000);
+                arm_update(&sbus_ch, sel, true);  /* ch6_high=true: 末端朝前 */
+            }
 
-            /* CH8左吸盘 CH9右吸盘, 所有模式有效 */
+            /* CH8左吸盘 CH9右吸盘 CH10齿条, 所有模式有效 */
             YV1(sbus_ch.ch[8] > 1300 ? 1 : 0);
             YV2(sbus_ch.ch[9] > 1300 ? 1 : 0);
+            grab_update_rack(sbus_ch.ch[10]);
         }
         else if(!sbus_connected())
         {
