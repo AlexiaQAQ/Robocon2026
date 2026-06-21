@@ -879,6 +879,16 @@
               <FileType>5</FileType>
               <FilePath>..\Lib\chassis.h</FilePath>
             </File>
+            <File>
+              <FileName>wit_motion.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Lib\wit_motion.c</FilePath>
+            </File>
+            <File>
+              <FileName>wit_motion.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Lib\wit_motion.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

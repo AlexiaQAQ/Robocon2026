@@ -90,6 +90,8 @@ virtualFolder:
         - path: ../Lib/pid.h
         - path: ../Lib/chassis.c
         - path: ../Lib/chassis.h
+        - path: ../Lib/wit_motion.c
+        - path: ../Lib/wit_motion.h
       folders: []
     - name: App
       files: []

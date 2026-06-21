@@ -34,6 +34,7 @@
 #include "sbus_set.h"
 #include "dm_motor.h"
 #include "chassis.h"
+#include "wit_motion.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -199,6 +200,7 @@ void start_task(void *parameter)
 		
 		can_filter_init();
 		sbus_rx_init();
+		wit_init();
 		chassis_init();
 	
 		xTaskCreate(led_task,"led_task",128,NULL,0,NULL);
