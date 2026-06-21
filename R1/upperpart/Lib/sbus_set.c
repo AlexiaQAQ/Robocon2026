@@ -1,7 +1,6 @@
 #include "sbus_set.h"
 
 unsigned char sbus_rx_buf[25] = {0};
-static unsigned char sbus_last_buf[25] = {0};  /* 用于检测帧更新 */
 SBUS_t sbus_ch;
 volatile bool sbus_frame_ready = false;
 
@@ -15,14 +14,21 @@ void sbus_poll(void)
 {
     uint8_t cnt;
 
+    /* DMA NDTR 检测: 寄存器不变 → DMA停转 → 陈帧丢弃 */
+    {
+        static uint16_t last_ndtr   = 0;
+        static uint8_t  freeze_cnt  = 0;
+        uint16_t ndtr = sbus_uart.hdmarx->Instance->NDTR;
+
+        if(ndtr == last_ndtr)
+        {
+            if(++freeze_cnt > 5) return;  /* 连续5次不变 → 确认冻结 */
+        }
+        else { freeze_cnt = 0; last_ndtr = ndtr; }
+    }
+
     if(sbus_rx_buf[0] == 0x0F && sbus_rx_buf[24] == 0x00)
     {
-        /* 帧内容未变 → DMA已停, 陈帧不处理 */
-        uint8_t i, same = 1;
-        for(i = 0; i < 25; i++) { if(sbus_rx_buf[i] != sbus_last_buf[i]) { same = 0; break; } }
-        if(same) return;
-        for(i = 0; i < 25; i++) sbus_last_buf[i] = sbus_rx_buf[i];
-
         sbus_ch.ch[0]  = ((sbus_rx_buf[1]     | sbus_rx_buf[2] << 8) & 0x07FF);
         sbus_ch.ch[1]  = ((sbus_rx_buf[2] >>3 | sbus_rx_buf[3] << 5) & 0x07FF);
         sbus_ch.ch[2]  = ((sbus_rx_buf[3] >>6 | sbus_rx_buf[4] << 2 | sbus_rx_buf[5] <<10) & 0x07FF);
