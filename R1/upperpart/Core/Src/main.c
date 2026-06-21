@@ -45,8 +45,8 @@
 /* USER CODE BEGIN PD */
 #define SBUS_TIMEOUT_MS 100
 #define LIFT_H_3F   25.0f   /* 抬升 3层 */
-#define LIFT_H_2F   28.8f   /* 抬升 2层 (中位) */
-#define LIFT_H_1F   19.0f   /* 抬升 1层 */
+#define LIFT_H_2F   29.0f   /* 抬升 2层 (中位) */
+#define LIFT_H_1F   19.5f   /* 抬升 1层 */
 #define LIFT_H_PLACE 16.5f  /* 放方块高度 */
 #define CH1_FINE_MAX   3.0f  /* CH1连续微调最大偏移 */
 /* USER CODE END PD */

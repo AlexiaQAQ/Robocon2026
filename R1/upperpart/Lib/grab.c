@@ -8,7 +8,7 @@
 #define RACK_SPEED  6.0f           /* 2325齿条 */
 #define FLIP_DOWN_SPEED  6.0f      /* 4310翻下去 */
 #define FLIP_UP_SPEED    2.0f      /* 4310翻上来 */
-#define LIFT_DOCK_BASE   10.0f     /* 对接基准高度 */
+#define LIFT_DOCK_BASE   14.1f     /* 对接基准高度 */
 #define LIFT_FINE_STEP    0.05f     /* CH1每次微调步长 */
 #define LIFT_FINE_MAX     3.0f     /* CH1微调最大累积 */
 
