@@ -83,8 +83,8 @@ void arm_update(SBUS_t *sbus, bool select_left, bool ch6_high)
     uint32_t now = xTaskGetTickCount();
     bool ch7 = (sbus->ch[7] < 650);     /* 物理上拨=ch_low */
 
-    /* 距上次调用超过50ms → 跨模式断档, 仅同步不切换 */
-    if((now - g_arm_last_tick) > pdMS_TO_TICKS(50))
+    /* 首次调用 或 距上次超过50ms → 仅同步不切换 */
+    if(g_arm_last_tick == 0 || (now - g_arm_last_tick) > pdMS_TO_TICKS(50))
     {
         g_last_ch7 = ch7;
         g_arm_last_tick = now;

@@ -1,6 +1,7 @@
 #include "sbus_set.h"
 
 unsigned char sbus_rx_buf[25] = {0};
+static unsigned char sbus_last_buf[25] = {0};  /* 用于检测帧更新 */
 SBUS_t sbus_ch;
 volatile bool sbus_frame_ready = false;
 
@@ -16,6 +17,12 @@ void sbus_poll(void)
 
     if(sbus_rx_buf[0] == 0x0F && sbus_rx_buf[24] == 0x00)
     {
+        /* 帧内容未变 → DMA已停, 陈帧不处理 */
+        uint8_t i, same = 1;
+        for(i = 0; i < 25; i++) { if(sbus_rx_buf[i] != sbus_last_buf[i]) { same = 0; break; } }
+        if(same) return;
+        for(i = 0; i < 25; i++) sbus_last_buf[i] = sbus_rx_buf[i];
+
         sbus_ch.ch[0]  = ((sbus_rx_buf[1]     | sbus_rx_buf[2] << 8) & 0x07FF);
         sbus_ch.ch[1]  = ((sbus_rx_buf[2] >>3 | sbus_rx_buf[3] << 5) & 0x07FF);
         sbus_ch.ch[2]  = ((sbus_rx_buf[3] >>6 | sbus_rx_buf[4] << 2 | sbus_rx_buf[5] <<10) & 0x07FF);

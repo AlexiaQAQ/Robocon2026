@@ -47,7 +47,7 @@
 #define LIFT_H_3F   25.0f   /* 抬升 3层 */
 #define LIFT_H_2F   28.8f   /* 抬升 2层 (中位) */
 #define LIFT_H_1F   19.0f   /* 抬升 1层 */
-#define LIFT_H_PLACE 15.0f  /* 放方块高度 */
+#define LIFT_H_PLACE 16.5f  /* 放方块高度 */
 #define CH1_FINE_MAX   3.0f  /* CH1连续微调最大偏移 */
 /* USER CODE END PD */
 
@@ -165,7 +165,12 @@ void sbus_task(void *parameter)
             }
             else if(ch_high(5)) /* 放方块模式 (抬升15 + 机械臂末端朝前) */
             {
-                lift_update(LIFT_H_PLACE);
+                float ch1 = (float)sbus_ch.ch[1];
+                float offset = 0.0f;
+                if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_FINE_MAX);
+                else if (ch1 < 972.0f)  offset =  Map(ch1,  972.0f,  326.0f, 0.0f, CH1_FINE_MAX);
+                lift_update(LIFT_H_PLACE + offset);
+
                 bool sel = (sbus_ch.ch[11] > 1000);
                 arm_update(&sbus_ch, sel, true);  /* ch6_high=true: 末端朝前 */
             }
