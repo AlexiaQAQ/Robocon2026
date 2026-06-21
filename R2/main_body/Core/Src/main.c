@@ -139,7 +139,7 @@ static void system_enable_handler(void)
 		arm_left_disable(&hcan2);               // CAN2: 左臂 ID 1-3
 		arm_right_disable(&hcan2);              // CAN2: 右臂 ID 4-6
 		/* 安全释放: 打开夹爪 + 关闭吸盘, 先发后失能 */
-		YV1(1);                                 // 夹爪打开
+		YV1(0);                                 // 夹爪打开
 		YV2(0);                                 // 左吸盘松开
 		YV3(0);                                 // 右吸盘松开
 		YV_flash_mcp2515(&hcan3);               // 发送电磁阀状态

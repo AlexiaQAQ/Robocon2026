@@ -5,7 +5,7 @@
  * @date    2026-06-10
  *
  * 移植到 motor_control 新库 motor_t* API。
- * 全向轮: dm_motor[0~3] DM_3519 MIT 模式
+ * 全向轮: dm_motor[0~3] DM_3519 SPD 速度模式
  * 抬升:   dm_motor[4~7] DM_4310 POS 模式
  */
 
@@ -26,11 +26,11 @@ void chassis_init(CAN_HandleTypeDef *hcan)
 {
     (void)hcan;
 
-    /* 全向轮: DM_3519 MIT 模式 */
-    dm_init(&dm_motor[0], 1, DM_MODE_MIT, DM_3519);
-    dm_init(&dm_motor[1], 2, DM_MODE_MIT, DM_3519);
-    dm_init(&dm_motor[2], 3, DM_MODE_MIT, DM_3519);
-    dm_init(&dm_motor[3], 4, DM_MODE_MIT, DM_3519);
+    /* 全向轮: DM_3519 SPD 速度模式 */
+    dm_init(&dm_motor[0], 1, DM_MODE_SPD, DM_3519);
+    dm_init(&dm_motor[1], 2, DM_MODE_SPD, DM_3519);
+    dm_init(&dm_motor[2], 3, DM_MODE_SPD, DM_3519);
+    dm_init(&dm_motor[3], 4, DM_MODE_SPD, DM_3519);
 
     /*
      * 独立抬升: DM_4310 POS 模式
@@ -99,7 +99,7 @@ void chassis_update(CAN_HandleTypeDef *hcan)
     for (int i = 0; i < 4; i++)
     {
         uint8_t idx = order[i];
-        dm_mit_ctrl(hcan, &dm_motor[idx], 0.0f, motor_out[idx], 0.0f, CHASSIS_TORQUE, 0.0f);
+        dm_spd_ctrl(hcan, dm_motor[idx].id, motor_out[idx]);
         vTaskDelay(1);
     }
 }
@@ -110,9 +110,11 @@ void chassis_update(CAN_HandleTypeDef *hcan)
 
 void lift_update(CAN_HandleTypeDef *hcan, float vel)
 {
+    static const float offset[4] = { LIFT_OFFSET_FR, LIFT_OFFSET_FL, LIFT_OFFSET_BL, LIFT_OFFSET_BR };
+
     for (int i = 0; i < 4; i++)
     {
-        float target_rad = lift_target_mm[i] / RACK_MM_PER_RAD * lift_dir[i];
+        float target_rad = (lift_target_mm[i] / RACK_MM_PER_RAD + offset[i]) * lift_dir[i];
         dm_pos_ctrl(hcan, 5 + (uint16_t)i, target_rad, vel);
         vTaskDelay(1);
     }

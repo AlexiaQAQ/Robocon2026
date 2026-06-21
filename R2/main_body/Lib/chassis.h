@@ -35,6 +35,12 @@
 #define LIFT_DIR_BL   (-1.0f)
 #define LIFT_DIR_BR   (+1.0f)
 
+/* 抬升零位偏移 (rad), 补偿各电机机械安装差异 */
+#define LIFT_OFFSET_FR  0.0f
+#define LIFT_OFFSET_FL  0.1f
+#define LIFT_OFFSET_BL  0.0f
+#define LIFT_OFFSET_BR  0.1f
+
 /* ---- 底盘物理参数 ---- */
 #define CHASSIS_R        0.245f            // 轮心到几何中心距离 (m)
 #define WHEEL_RADIUS     0.064f            // 全向轮半径 (m), 直径 127mm
@@ -46,7 +52,7 @@
 #define RACK_MM_PER_RAD  20.5f             // 420mm / 20.85rad
 
 /* 抬升位置模式速度 (rad/s) */
-#define LIFT_VEL_SLOW    2.5f
+#define LIFT_VEL_SLOW    5.0f
 #define LIFT_VEL_FAST    20.0f
 
 /* ---- 外部变量 ---- */

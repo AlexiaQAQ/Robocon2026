@@ -59,7 +59,8 @@ static void build_status_frame(void)
     {
         float front_sum = 0.0f, back_sum = 0.0f;
         int   front_cnt = 0, back_cnt  = 0;
-        static const float lift_dir[4] = { LIFT_DIR_FR, LIFT_DIR_FL, LIFT_DIR_BL, LIFT_DIR_BR };
+        static const float lift_dir[4]   = { LIFT_DIR_FR, LIFT_DIR_FL, LIFT_DIR_BL, LIFT_DIR_BR };
+        static const float lift_offs[4]  = { LIFT_OFFSET_FR, LIFT_OFFSET_FL, LIFT_OFFSET_BL, LIFT_OFFSET_BR };
 
         /* DM_4310 POS 反馈 p_int→pos 固定 ±12.5rad (单圈), 超出回卷。
          * 一卷 = 512.5mm。平时以 prev 为锚追踪帧间位移, 首帧用 target 锚定。 */
@@ -72,7 +73,8 @@ static void build_status_frame(void)
         {
             if (dm_motor[i].start_flag)
             {
-                float raw = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
+                float raw = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4]
+                          - lift_offs[i - 4] * RACK_MM_PER_RAD;
                 /* 首帧: 以 target 锚定; 后续: 以 prev 追踪 */
                 if (!prev_valid[i - 4])
                 {
@@ -98,7 +100,8 @@ static void build_status_frame(void)
         {
             if (dm_motor[i].start_flag)
             {
-                float raw = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4];
+                float raw = dm_motor[i].para.pos * RACK_MM_PER_RAD * lift_dir[i - 4]
+                          - lift_offs[i - 4] * RACK_MM_PER_RAD;
                 if (!prev_valid[i - 4])
                 {
                     float tgt = (float)lift_target_mm[i - 4];
