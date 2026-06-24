@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
@@ -89,7 +90,6 @@ static inline bool ch_mid(int ch)  { return sbus_ch.ch[ch] >= 650 && sbus_ch.ch[
 
 static void system_enable_handler(void)
 {
-    static bool last_ch4_mid = false;
     bool ch4 = (ch_mid(4) || ch_high(4));
 
     if(ch4 && !last_ch4)                    /* 上沿 -> 解锁 */
@@ -105,12 +105,8 @@ static void system_enable_handler(void)
         lift_disable();
         arm_disable();
         grab_disable();
+        grab_reset();                        /* 锁车时清零抓取工序 */
     }
-
-    /* CH4 拨入中位 -> 仅一次清零抓取工序 */
-    if(ch_mid(4) && !last_ch4_mid)
-        grab_reset();
-    last_ch4_mid = ch_mid(4);
 
     last_ch4 = ch4;
 }
@@ -143,6 +139,26 @@ void sbus_task(void *parameter)
             last_sbus_tick = xTaskGetTickCount();
             system_enable_handler();
 
+            /* CH4 中位 + CH7 边沿 → 串口发送指令 */
+            {
+                static bool ch7_ser_last  = false;
+                static bool ch4_was_mid   = false;
+                bool ch4_is_mid = ch_mid(4);
+                bool ch7 = (sbus_ch.ch[7] < 650);
+
+                if(ch4_is_mid && !ch4_was_mid)
+                    ch7_ser_last = ch7;                    /* 刚进入中位, 同步 */
+                else if(ch4_is_mid && ch7 != ch7_ser_last)
+                {
+                    ch7_ser_last = ch7;
+                    uint8_t cmd[] = {0xA1, 0xF1, 0xCC, 0x01, 0xEE};
+                    HAL_UART_Transmit(&huart1, cmd, 5, 10);
+                }
+                ch4_was_mid = ch4_is_mid;
+            }
+
+            if(!ch_mid(4))      /* CH4 中位时独占串口模式, 跳过 CH5 调度 */
+            {
             if(ch_low(5))       /* 抓取模式 (含抬升回零/R2对接) */
             {
                 lift_update(grab_lift_target());
@@ -174,6 +190,7 @@ void sbus_task(void *parameter)
                 bool sel = (sbus_ch.ch[11] > 1000);
                 arm_update(&sbus_ch, sel, true);  /* ch6_high=true: 末端朝前 */
             }
+            }  /* !ch_mid(4) */
 
             /* CH8左吸盘 CH9右吸盘 CH10齿条, 所有模式有效 */
             YV1(sbus_ch.ch[8] > 1300 ? 1 : 0);
