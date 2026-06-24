@@ -27,14 +27,14 @@ typedef enum {
 } grab_step_t;
 
 static grab_step_t g_step = G_IDLE;
-static bool g_last_ch7 = false;
-static bool g_first    = true;      /* 首次进入同步 */
+static bool     g_last_ch7       = false;  /* CH7 边沿 */
+static uint32_t g_grab_last_tick = 0;      /* 上次调用tick, 检测跨模式断档 */
 static float g_rack = 0.0f;         /* 2325齿条目标 */
 static float g_flip = 0.0f;         /* 4310翻转目标 */
 static float g_flip_speed = FLIP_UP_SPEED;
-static float g_ch1_offset = 0.0f;   /* CH1摇杆微调偏移 */
-static int   g_ch1_zone  = 0;       /* CH1当前区域: -1低/0中/1高 */
-static bool  g_ch1_sync  = true;    /* CH1首次同步 */
+static float    g_ch1_offset     = 0.0f;  /* CH1摇杆微调偏移 */
+static int      g_ch1_zone       = 0;      /* CH1当前区域: -1低/0中/1高 */
+static uint32_t g_ch1_last_tick  = 0;      /* 上次调用tick, 检测跨模式断档 */
 
 extern bool g_sys_enabled;
 
@@ -65,8 +65,6 @@ void grab_reset(void)
     g_flip       = 0.0f;
     g_ch1_offset = 0.0f;
     YV3(0);
-    g_first     = true;   /* 下次 grab_update 时重新同步 CH7 */
-    g_ch1_sync  = true;   /* 下次 grab_update 时重新同步 CH1 */
 }
 
 /* ================================================================ */
@@ -74,15 +72,26 @@ void grab_reset(void)
 void grab_update(SBUS_t *sbus)
 {
     /* CH7 边沿 → 推进工序 */
+    uint32_t now = xTaskGetTickCount();
     bool ch7 = (sbus->ch[7] < 650);
 
-    if(g_first) { g_first = false; g_last_ch7 = ch7; }  /* 首帧仅同步 */
+    /* 首次调用 或 距上次超过50ms → 仅同步不推进 (防跨模式误触发) */
+    if(g_grab_last_tick == 0 || (now - g_grab_last_tick) > pdMS_TO_TICKS(50))
+    {
+        g_last_ch7 = ch7;
+        g_grab_last_tick = now;
+    }
     else if(ch7 != g_last_ch7)
     {
         g_last_ch7 = ch7;
-        if(g_step < G_LIFT_RISE)      g_step++;                 /* 步骤0→5 线性 */
-        else if(g_step == G_LIFT_RISE) g_step = G_LIFT_RETURN;  /* 6→7 切换 */
-        else                           g_step = G_LIFT_RISE;     /* 7→6 切换 */
+        g_grab_last_tick = now;
+        if(g_step < G_LIFT_RISE)      g_step++;
+        else if(g_step == G_LIFT_RISE) g_step = G_LIFT_RETURN;
+        else                           g_step = G_LIFT_RISE;
+    }
+    else
+    {
+        g_grab_last_tick = now;
     }
 
     /* CH1 摇杆增量微调 (仅步骤6+生效, 边沿触发, 需回中才能再次调节) */
@@ -91,12 +100,22 @@ void grab_update(SBUS_t *sbus)
         float ch1 = (float)sbus->ch[1];
         int zone = (ch1 > 1012.0f) ? 1 : (ch1 < 972.0f) ? -1 : 0;
 
-        if(g_ch1_sync) { g_ch1_sync = false; g_ch1_zone = zone; }
+        /* 首次调用 或 距上次超过50ms → 仅同步不调节 (防跨模式误触发) */
+        if(g_ch1_last_tick == 0 || (xTaskGetTickCount() - g_ch1_last_tick) > pdMS_TO_TICKS(50))
+        {
+            g_ch1_zone = zone;
+            g_ch1_last_tick = xTaskGetTickCount();
+        }
         else if(zone != g_ch1_zone)
         {
             if(zone == 1)       g_ch1_offset -= LIFT_FINE_STEP;
             else if(zone == -1) g_ch1_offset += LIFT_FINE_STEP;
             g_ch1_zone = zone;
+            g_ch1_last_tick = xTaskGetTickCount();
+        }
+        else
+        {
+            g_ch1_last_tick = xTaskGetTickCount();
         }
         if(g_ch1_offset >  LIFT_FINE_MAX) g_ch1_offset =  LIFT_FINE_MAX;
         if(g_ch1_offset < -LIFT_FINE_MAX) g_ch1_offset = -LIFT_FINE_MAX;

@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
@@ -151,8 +150,9 @@ void sbus_task(void *parameter)
                 else if(ch4_is_mid && ch7 != ch7_ser_last)
                 {
                     ch7_ser_last = ch7;
-                    uint8_t cmd[] = {0xA1, 0xF1, 0xCC, 0x01, 0xEE};
-                    HAL_UART_Transmit(&huart1, cmd, 5, 10);
+                    static uint8_t ir_cmd[] = {0xA1, 0xF1, 0xCC, 0x01, 0xEE};
+                    HAL_UART_Transmit_DMA(&huart1, ir_cmd, 5);
+                    HAL_UART_Transmit_DMA(&huart2, ir_cmd, 5);
                 }
                 ch4_was_mid = ch4_is_mid;
             }
@@ -283,6 +283,7 @@ int main(void)
   MX_SPI3_Init();
   MX_UART4_Init();
   MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 	
 	if (xTaskCreate(start_task, "start_task", 256, NULL, 0, NULL) != pdPASS)
