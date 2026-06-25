@@ -29,12 +29,14 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include "bsp_can.h"
 #include "sbus_set.h"
 #include "dm_motor.h"
 #include "chassis.h"
 #include "wit_motion.h"
+#include "pid.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -78,6 +80,12 @@ float set_vw = 0.0f;
 
 bool sys_enabled = false;
 static bool last_ch4 = false;
+
+/* ---- 航向角 PID 参数 (Keil Watch 窗口可实时修改) ---- */
+float yaw_gain[3]  = {0.2f, 0.0f, 0.0f};  /* Kp, Ki, Kd */
+float yaw_max_out  = 20.0f;                /* PID 输出限幅 (rad/s) */
+float yaw_max_iout = 3.0f;                 /* 积分限幅 */
+float yaw_target   = 0.0f;                 /* 目标航向角 (°) */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -99,6 +107,16 @@ static inline bool sbus_connected(void)
 	return (xTaskGetTickCount() - last_sbus_tick) < pdMS_TO_TICKS(SBUS_TIMEOUT_MS);
 }
 
+/* 摇杆线性映射 */
+static float expo_map(int16_t val, int16_t lo, int16_t hi, int16_t dead, float max_out)
+{
+    int16_t center = (lo + hi) / 2;
+    if (val >= center - dead && val <= center + dead) return 0;
+    float t = (float)(abs(val - center) - dead) / (float)((hi - lo) / 2 - dead);
+    if (t > 1.0f) t = 1.0f;
+    return (val > center ? 1.0f : -1.0f) * t * max_out;
+}
+
 bool ch_down(int16_t ch)
 {
 	return sbus_ch.ch[ch] > 1600;
@@ -107,7 +125,7 @@ bool ch_down(int16_t ch)
 static void system_enable_handler(void)
 {
 	bool ch4 = sbus_connected() && ch_down(4);
-	
+
 	if (ch4 && !last_ch4)
 	{
 		sys_enabled = true;
@@ -118,7 +136,7 @@ static void system_enable_handler(void)
 		sys_enabled = false;
 		chassis_disable();
 	}
-	
+
 	last_ch4 = ch4;
 }
 
@@ -127,48 +145,91 @@ void led_task(void *parameter)
 	while(1)
 	{
 		HAL_GPIO_TogglePin(GPIOG,led_buf);
-		
+
 		if(led_buf<0x0100){led_buf <<= 1;}
 		else{led_buf = 0x0001;}
-		
+
 		vTaskDelay(200);
 	}
 }
 
 void remote_task(void *parameter)
 {
+	static PidTypeDef  yaw_pid;
+	static bool        yaw_inited   = false;
+	static bool        last_enabled = false;
+	static bool        yaw_captured = false;
+
+	if (!yaw_inited)
+	{
+		PID_Init(&yaw_pid, PID_POSITION, yaw_gain, yaw_max_out, yaw_max_iout);
+		yaw_inited = true;
+	}
+
 	while(1)
 	{
+		/* 每周期同步全局增益 → Keil Watch 改值即时生效 */
+		yaw_pid.Kp = yaw_gain[0];
+		yaw_pid.Ki = yaw_gain[1];
+		yaw_pid.Kd = yaw_gain[2];
+		yaw_pid.max_out  = yaw_max_out;
+		yaw_pid.max_iout = yaw_max_iout;
+
 		rx_set(&sbus_ch);
-			
+
 		if (sbus_frame_valid())
 			last_sbus_tick = xTaskGetTickCount();
-		
+
 		system_enable_handler();
-		
+
+		if (!sys_enabled)
+		{
+			set_vx = 0; set_vy = 0; set_vw = 0;
+			last_enabled = false;
+		}
+
 		if (sys_enabled)
 		{
+			if (!last_enabled)
+			{
+				yaw_target   = wit_yaw;
+				PID_clear(&yaw_pid);
+				last_enabled = true;
+			}
+
 			int16_t ch_val;
 
 			ch_val = sbus_ch.ch[2];
-			set_vx = -(ch_val >= 990 && ch_val <= 1010) ? 0 : Map(ch_val, 333, 1666, -15, 15);
+			set_vx = expo_map(ch_val, 326, 1659, 5, 15.0f);
 
 			ch_val = sbus_ch.ch[3];
-			set_vy = -(ch_val >= 990 && ch_val <= 1010) ? 0 : Map(ch_val, 333, 1666, -15, 15);
+			set_vy = expo_map(ch_val, 326, 1659, 5, 15.0f);
 
 			ch_val = sbus_ch.ch[0];
-			set_vw = -(ch_val >= 990 && ch_val <= 1010) ? 0 : Map(ch_val, 333, 1666, -10, 10);
+			float stick_vw = expo_map(ch_val, 326, 1659, 5, 10.0f);
+			if (stick_vw != 0.0f)
+			{
+				/* 摇杆偏转 → 开环速度控制, 跟手 */
+				yaw_captured = false;
+				set_vw       = stick_vw;
+				PID_clear(&yaw_pid);
+			}
+			else
+			{
+				/* 摇杆中位 → 松手瞬间抓取目标, PID 锁航向 */
+				if (!yaw_captured)
+				{
+					yaw_target   = wit_yaw;
+					yaw_captured = true;
+					PID_clear(&yaw_pid);
+				}
+				float fdb = wit_yaw;
+				while (fdb - yaw_target >  180.0f) fdb -= 360.0f;
+				while (fdb - yaw_target < -180.0f) fdb += 360.0f;
+				set_vw = -PID_Calc(&yaw_pid, fdb, yaw_target);
+			}
+		}
 
-		}
-		
-		
-		if (!sys_enabled)
-		{
-			set_vx = 0;
-			set_vy = 0;
-			set_vw = 0;
-		}
-		
 		vTaskDelay(10);
 	}
 }
@@ -177,7 +238,7 @@ void chassis_task(void *parameter)
 {
 	while(1)
 	{
-    if (sys_enabled)
+		if (sys_enabled)
 		{
 			chassis_update();
 		}
@@ -196,17 +257,17 @@ void start_task(void *parameter)
 		xt1(0);
 		xt2(0);
 		xt3(0);
-		xt4(0);	
-		
+		xt4(0);
+
 		can_filter_init();
 		sbus_rx_init();
 		wit_init();
 		chassis_init();
-	
+
 		xTaskCreate(led_task,"led_task",128,NULL,0,NULL);
 		xTaskCreate(remote_task,"remote_task",512,NULL,0,NULL);
 		xTaskCreate(chassis_task,"chassis_task",512,NULL,0,NULL);
-		
+
 		vTaskDelete(NULL);
 	}
 }
@@ -326,56 +387,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-//void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-//{
-//  if (huart == &huart6)
-//  {
-//	// 处理接收到的数据
-//	if(uart6_rx_buf[0]==0xCC && uart6_rx_buf[8]==0xEE)
-//	{
-//		HAL_UART_DMAStop(&gimbal_uart);
-//		set_yaw = (uart6_rx_buf[1]<<8|uart6_rx_buf[2]);
-//		set_pitch = -(uart6_rx_buf[3]<<8|uart6_rx_buf[4]);
-//		
-//		set_shoot_speed = (uart6_rx_buf[5]<<8|uart6_rx_buf[6]);
-//		
-//		if(set_yaw>90){set_yaw=90;}
-//		if(set_yaw<-90){set_yaw=-90;}
-//		
-//		if(set_pitch>90){set_yaw=90;}
-//		if(set_pitch<-45){set_yaw=-45;}
-//		
-//		if(uart6_rx_buf[7]==0x01){xt1(1);xt2(0);}
-//		else if(uart6_rx_buf[7]==0x02){xt1(0);xt2(1);}
-//		else{xt1(0);xt2(0);}
-//		
-//		if(uart6_rx_buf[7]==0x00){YV6(1);YV7(0);YV8(0);}
-//		else if(uart6_rx_buf[7]==0x01){YV6(0);YV7(0);YV8(1);}
-//		else if(uart6_rx_buf[7]==0x01){YV6(0);YV7(1);YV8(0);}
-//		else{YV6(0);YV7(0);YV8(0);}
-//		
-//		uart6_tx_buf[0] = 0x39;
-//		uart6_tx_buf[1] = 0x39;
-//		
-//		uart6_tx_buf[2] = (dm_motor[0].para.angle_pos>>8)&0x00ff;
-//		uart6_tx_buf[3] = (dm_motor[0].para.angle_pos&0x00ff);
-//		
-//		uart6_tx_buf[4] = (dm_motor[1].para.angle_pos>>8)&0x00ff;
-//		uart6_tx_buf[5] = (dm_motor[1].para.angle_pos&0x00ff);
-//		
-//		now_p = ((uart6_tx_buf[2]<<8)|uart6_tx_buf[3]);
-//		now_y = ((uart6_tx_buf[4]<<8)|uart6_tx_buf[5]);
-//			
-//		HAL_UART_Transmit(&huart6,uart6_tx_buf,6,0xff);
-//	}
-//	  
-////	//返回应答
-////	HAL_UART_Transmit(&huart6,uart6_tx_buf,6,0xff);
 
-//	// 重新启动接收
-//	HAL_UART_Receive_IT(&huart6, uart6_rx_buf, 9);
-//  }
-//}
 /* USER CODE END 4 */
 
 /**
