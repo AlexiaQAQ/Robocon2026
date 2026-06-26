@@ -37,14 +37,14 @@
 
 /* 抬升零位偏移 (rad), 补偿各电机机械安装差异 */
 #define LIFT_OFFSET_FR  0.0f
-#define LIFT_OFFSET_FL  0.1f
+#define LIFT_OFFSET_FL  0.0f
 #define LIFT_OFFSET_BL  0.0f
-#define LIFT_OFFSET_BR  0.1f
+#define LIFT_OFFSET_BR  0.0f
 
 /* ---- 底盘物理参数 ---- */
 #define CHASSIS_R        0.245f            // 轮心到几何中心距离 (m)
 #define WHEEL_RADIUS     0.064f            // 全向轮半径 (m), 直径 127mm
-#define CHASSIS_TORQUE   6.0f              // MIT 阻尼 (kd), 越大越"硬"
+#define CHASSIS_TORQUE   7.0f              // MIT 阻尼 (kd), 越大越"硬"
 #define COS45            0.70710678118f
 #define SPEED_SCALE      0.0001f           // 1/10000, 协议 10000=1m/s
 

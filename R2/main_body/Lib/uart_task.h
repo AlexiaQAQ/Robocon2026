@@ -10,9 +10,6 @@
 /* Chassis velocity setpoints (defined in main.c) */
 extern float set_vx, set_vy, set_vw;
 
-/* Arm position setpoints (defined in uart_task.c) */
-extern float fb_des, lr_des, ud_des, end_des;
-
 /* Shared system state (defined in main.c) */
 extern bool sys_enabled;
 bool ch_high(int ch);
@@ -50,11 +47,6 @@ extern uint8_t left_sucker, right_sucker;
 /* 武器头 (控制帧) */
 extern uint8_t weapon_pitch;    // 0=保持 1=平行地面 2=垂直地面
 extern uint8_t weapon_gripper;  // 0=保持 1=打开 2=闭合
-
-/* 旧兼容变量 (逐步废弃) */
-extern float   upstairs_chassis_speed;
-extern uint8_t up_dis_front;
-extern uint8_t up_dis_back;
 
 /* ==================== API ==================== */
 

@@ -5,10 +5,10 @@
  * @date    2026-06-08
  *
  * 机械臂布局 (俯视图):
- *   [3]                              [6]   ← 末端吸盘
- *   [2]                              [5]
- *   [1]【轮】车头【轮】 [4]                 ← 根部
- *       【轮】车尾【轮】
+ *   [3]               [6]   ← 末端吸盘
+ *   [2]               [5]
+ *   [1]【轮】车头【轮】 [4]   ← 根部
+ *      【轮】车尾【轮】
  *
  * 左臂: CAN2 ID 1(根) 2(中) 3(末)
  * 右臂: CAN2 ID 4(根) 5(中) 6(末) (待实现)
@@ -38,8 +38,8 @@
 
 /* ==================== 位置模式速度 ==================== */
 
-#define ARM_VEL_SLOW  0.3f    // rad/s, normal 模式
-#define ARM_VEL_FAST  0.5f    // rad/s, fast 模式
+#define ARM_VEL_SLOW  0.4f    // rad/s, normal 模式
+#define ARM_VEL_FAST  0.6f    // rad/s, fast 模式
 
 /* ==================== 原点位置 (机械零位, rad) ==================== */
 
@@ -52,11 +52,6 @@
 #define ARM_R_ORIGIN_P1   0.0f
 #define ARM_R_ORIGIN_P2   2.99f
 #define ARM_R_ORIGIN_P3   1.44f
-
-/* 兼容旧宏 (逐步废弃) */
-#define ARM_ORIGIN_P1  ARM_L_ORIGIN_P1
-#define ARM_ORIGIN_P2  ARM_L_ORIGIN_P2
-#define ARM_ORIGIN_P3  ARM_L_ORIGIN_P3
 
 /* ==================== 全局变量 ==================== */
 

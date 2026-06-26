@@ -30,14 +30,6 @@ uint8_t right_sucker   = 0;
 uint8_t weapon_pitch   = 0;
 uint8_t weapon_gripper = 0;
 
-/* 旧兼容 */
-float   upstairs_chassis_speed = 0.0f;
-uint8_t up_dis_front = 0;
-uint8_t up_dis_back  = 0;
-
-/* Arm position setpoints (from deleted arm.c) */
-float fb_des = 100.0f, lr_des = 0.0f, ud_des = 50.0f, end_des = -1.57f;
-
 /* ==================== TX 帧 ==================== */
 
 /* 状态帧 23 bytes (协议 §3) */
