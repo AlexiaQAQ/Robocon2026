@@ -44,9 +44,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SBUS_TIMEOUT_MS 100
-#define LIFT_H_3F   25.0f   /* 抬升 3层 */
-#define LIFT_H_2F   29.0f   /* 抬升 2层 (中位) */
-#define LIFT_H_1F   19.5f   /* 抬升 1层 */
+#define LIFT_H_3F   24.0f   /* 抬升 3层 */
+#define LIFT_H_2F   14.0f   /* 抬升 2层 (中位) */
+#define LIFT_H_1F   4.0f   /* 抬升 1层 */
 #define LIFT_H_PLACE 16.5f  /* 放方块高度 */
 #define CH1_FINE_MAX   3.0f  /* CH1连续微调最大偏移 */
 /* USER CODE END PD */
@@ -177,7 +177,7 @@ void sbus_task(void *parameter)
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
-                arm_update(&sbus_ch, sel, ch_high(6));
+                arm_update(&sbus_ch, sel, true);  /* 末端始终朝前 */
             }
             else if(ch_high(5)) /* 放方块模式 (抬升15 + 机械臂末端朝前) */
             {

@@ -8,7 +8,9 @@
 #define RACK_SPEED  6.0f           /* 2325齿条 */
 #define FLIP_DOWN_SPEED  6.0f      /* 4310翻下去 */
 #define FLIP_UP_SPEED    2.0f      /* 4310翻上来 */
-#define LIFT_DOCK_BASE   14.1f     /* 对接基准高度 */
+#define FLIP_UP_POS      0.0f      /* 4310翻上位置 */
+#define FLIP_DOWN_POS   -1.8f      /* 4310翻下取杆位置 */
+#define LIFT_DOCK_BASE   14.15f    /* 对接基准高度 */
 #define LIFT_FINE_STEP    0.05f     /* CH1每次微调步长 */
 #define LIFT_FINE_MAX     3.0f     /* CH1微调最大累积 */
 
@@ -30,7 +32,7 @@ static grab_step_t g_step = G_IDLE;
 static bool     g_last_ch7       = false;  /* CH7 边沿 */
 static uint32_t g_grab_last_tick = 0;      /* 上次调用tick, 检测跨模式断档 */
 static float g_rack = 0.0f;         /* 2325齿条目标 */
-static float g_flip = 0.0f;         /* 4310翻转目标 */
+static float g_flip = FLIP_UP_POS;   /* 4310翻转目标 */
 static float g_flip_speed = FLIP_UP_SPEED;
 static float    g_ch1_offset     = 0.0f;  /* CH1摇杆微调偏移 */
 static int      g_ch1_zone       = 0;      /* CH1当前区域: -1低/0中/1高 */
@@ -62,7 +64,7 @@ void grab_reset(void)
 {
     g_step       = G_IDLE;
     g_rack       = 0.0f;
-    g_flip       = 0.0f;
+    g_flip       = FLIP_UP_POS;
     g_ch1_offset = 0.0f;
     YV3(0);
 }
@@ -124,22 +126,22 @@ void grab_update(SBUS_t *sbus)
     switch(g_step)
     {
         case G_IDLE:
-            g_flip = 0.0f; YV3(0); g_flip_speed = FLIP_UP_SPEED;  break;
+            g_flip = FLIP_UP_POS; YV3(0); g_flip_speed = FLIP_UP_SPEED;  break;
 
         case G_RACK_ZERO:
-            g_flip = 0.0f; YV3(0); g_flip_speed = FLIP_UP_SPEED;  break;
+            g_flip = FLIP_UP_POS; YV3(0); g_flip_speed = FLIP_UP_SPEED;  break;
 
         case G_CLAW_OPEN:
             YV3(1); break;
 
         case G_FLIP_DOWN:
-            g_flip = -1.9f; g_flip_speed = FLIP_DOWN_SPEED;  break;
+            g_flip = FLIP_DOWN_POS; g_flip_speed = FLIP_DOWN_SPEED;  break;
 
         case G_CLAW_CLOSE:
             YV3(0); break;
 
         case G_FLIP_BACK:
-            g_flip = 0.0f; g_flip_speed = FLIP_UP_SPEED;  break;
+            g_flip = FLIP_UP_POS; g_flip_speed = FLIP_UP_SPEED;  break;
 
         case G_LIFT_RISE:     /* 对接高度 + CH10手动 */
         case G_LIFT_RETURN:   /* 初始高度 + CH10手动 */
