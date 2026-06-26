@@ -38,8 +38,7 @@
 | USART2 | PD5(TX)/PD6(RX) | 电控→上位机: 状态帧 23B (50Hz) |
 | USART3 | PD8(TX)/PD9(RX) | 预留: 串口陀螺仪 |
 | TIM14 | — | FreeRTOS 系统时基 |
-| GPIOE[0:3] | PE0~PE3 | 预留 LED |
-| GPIOE[4:7] | PE4~PE7 | LED 流水灯 |
+| GPIOE[0:7] | PE0~PE7 | LED 流水灯 |
 | GPIOE[9] | PE9 | 前轮前光电 (输入) |
 | GPIOE[11] | PE11 | 前轮后光电 (输入) |
 | GPIOE[13] | PE13 | 后轮前光电 (输入) |
@@ -98,7 +97,7 @@ R2/main_body/
 | `chassis_task` | ~2ms | 512 | 0 | 全向轮运动学 + CAN1 MIT 驱动 |
 | `up_cs_task` | 50ms | 512 | 0 | 抬升 + 夹爪翻转 + 电磁阀刷新 |
 | `arm_task` | 10ms | 512 | 0 | 左右双机械臂位置控制 |
-| `led_task` | 10ms | 56 | 2 | LED 流水灯 (PE4→PE7) |
+| `led_task` | 200ms | 56 | 2 | LED 流水灯 (PE0→PE7) |
 
 ---
 
@@ -192,7 +191,7 @@ t_scale = 1 / (r × cos45°)    // 补偿 COS45 使实际车速 = vx
 - `SPEED_SCALE = 0.0001` (协议 10000 = 1 m/s)
 - `WHEEL_RADIUS = 0.064m` (直径 127mm)
 - `CHASSIS_R = 0.245m`
-- `CHASSIS_TORQUE = 6.0` (MIT kd 阻尼)
+- `CHASSIS_TORQUE = 7.0` (MIT kd 阻尼)
 - 发送顺序: BR(1)→FR(2)→BL(4)→FL(3)
 
 ### USART3
@@ -211,6 +210,7 @@ t_scale = 1 / (r × cos45°)    // 补偿 COS45 使实际车速 = vx
 6. **机械臂限幅**: ±180° (±3141 mrad)
 7. **DMA 异常复位**: 帧头尾校验失败自动重置
 8. **夹爪翻转保护**: `gripper_flip_ready` 标志, 首次 CH7 操作后才动作
+9. **CH4 失能安全释放**: YV1 夹紧 + YV2/YV3 松开, 先发后失能 hcan3
 
 ---
 

@@ -222,10 +222,12 @@ void sbus_task(void *parameter)
 					{
 						YV1(2);                     // 翻转 YV1
 					}
-					else if (ch_high(6))             // CH6 升降模式: 左右吸盘
+					else if (ch_high(6))             // CH6 升降模式: 左右吸盘全开/全关
 					{
-						YV2(2);                     // 翻转左吸盘
-						YV3(2);                     // 翻转右吸盘
+						static bool sucker_on = false;
+						sucker_on = !sucker_on;
+						YV2(sucker_on ? 1 : 0);     // 左吸盘
+						YV3(sucker_on ? 1 : 0);     // 右吸盘
 					}
 				}
 				last_ch7_state = ch7_now;
