@@ -53,16 +53,16 @@ void arm_left_set(CAN_HandleTypeDef *hcan, float p1, float p2, float p3, float v
     dm_pos_ctrl(hcan, ARM_LEFT_ID3, p3, vel);  vTaskDelay(1);
 }
 
-void arm_left_update(CAN_HandleTypeDef *hcan, float vel)
+void arm_left_update(CAN_HandleTypeDef *hcan, bool fast)
 {
     /* ID2 方向反转: 协议正=上, 电机正=下 */
     float p1 =  (float)left_pitch1 * 0.001f;
     float p2 = -(float)left_pitch2 * 0.001f;
     float p3 =  (float)left_pitch3 * 0.001f;
 
-    dm_pos_ctrl(hcan, ARM_LEFT_ID1, p1, vel);  vTaskDelay(1);
-    dm_pos_ctrl(hcan, ARM_LEFT_ID2, p2, vel);  vTaskDelay(1);
-    dm_pos_ctrl(hcan, ARM_LEFT_ID3, p3, vel);  vTaskDelay(1);
+    dm_pos_ctrl(hcan, ARM_LEFT_ID1, p1, fast ? ARM_L1_VEL_FAST : ARM_L1_VEL_SLOW);  vTaskDelay(1);
+    dm_pos_ctrl(hcan, ARM_LEFT_ID2, p2, fast ? ARM_L2_VEL_FAST : ARM_L2_VEL_SLOW);  vTaskDelay(1);
+    dm_pos_ctrl(hcan, ARM_LEFT_ID3, p3, fast ? ARM_L3_VEL_FAST : ARM_L3_VEL_SLOW);  vTaskDelay(1);
 }
 
 /* ================================================================
@@ -90,16 +90,16 @@ void arm_right_set(CAN_HandleTypeDef *hcan, float p1, float p2, float p3, float 
     dm_pos_ctrl(hcan, ARM_RIGHT_ID3, p3, vel);  vTaskDelay(1);
 }
 
-void arm_right_update(CAN_HandleTypeDef *hcan, float vel)
+void arm_right_update(CAN_HandleTypeDef *hcan, bool fast)
 {
     /* ID4/ID6 方向反转: 协议正=上, 电机正=下 */
     float p1 = -(float)right_pitch1 * 0.001f;
     float p2 =  (float)right_pitch2 * 0.001f;
     float p3 = -(float)right_pitch3 * 0.001f;
 
-    dm_pos_ctrl(hcan, ARM_RIGHT_ID1, p1, vel);  vTaskDelay(1);
-    dm_pos_ctrl(hcan, ARM_RIGHT_ID2, p2, vel);  vTaskDelay(1);
-    dm_pos_ctrl(hcan, ARM_RIGHT_ID3, p3, vel);
+    dm_pos_ctrl(hcan, ARM_RIGHT_ID1, p1, fast ? ARM_R1_VEL_FAST : ARM_R1_VEL_SLOW);  vTaskDelay(1);
+    dm_pos_ctrl(hcan, ARM_RIGHT_ID2, p2, fast ? ARM_R2_VEL_FAST : ARM_R2_VEL_SLOW);  vTaskDelay(1);
+    dm_pos_ctrl(hcan, ARM_RIGHT_ID3, p3, fast ? ARM_R3_VEL_FAST : ARM_R3_VEL_SLOW);
 }
 
 /* ================================================================

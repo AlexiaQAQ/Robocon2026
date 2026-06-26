@@ -343,22 +343,20 @@ void arm_task(void *parameter)
 	 */
 	while (1)
 	{
-		float vel = ARM_VEL_SLOW;
 		if (sys_enabled)
 		{
 			if (!ch_high(5))
 			{
 				/* 手动模式: 双机械臂回原点 */
-				vel = ARM_VEL_SLOW;
-				arm_left_set(&hcan2,  ARM_L_ORIGIN_P1, ARM_L_ORIGIN_P2, ARM_L_ORIGIN_P3, vel);
-				arm_right_set(&hcan2, ARM_R_ORIGIN_P1, ARM_R_ORIGIN_P2, ARM_R_ORIGIN_P3, vel);
+				arm_left_set(&hcan2,  ARM_L_ORIGIN_P1, ARM_L_ORIGIN_P2, ARM_L_ORIGIN_P3, ARM_L1_VEL_SLOW);
+				arm_right_set(&hcan2, ARM_R_ORIGIN_P1, ARM_R_ORIGIN_P2, ARM_R_ORIGIN_P3, ARM_R1_VEL_SLOW);
 			}
 			else
 			{
-				/* 自动模式: 双机械臂走串口 (ID2/4/6方向已适配) */
-				vel = (lift_mode == 1) ? ARM_VEL_FAST : ARM_VEL_SLOW;
-				arm_left_update(&hcan2, vel);
-				arm_right_update(&hcan2, vel);
+				/* 自动模式: 各关节独立速度 (arm.h) */
+				bool fast = (lift_mode == 1);
+				arm_left_update(&hcan2, fast);
+				arm_right_update(&hcan2, fast);
 			}
 		}
 

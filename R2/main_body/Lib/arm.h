@@ -20,6 +20,7 @@
 #ifndef _ARM_H_
 #define _ARM_H_
 
+#include <stdbool.h>
 #include "main.h"
 #include "can.h"
 #include "dm_motor.h"
@@ -36,10 +37,23 @@
 #define ARM_RIGHT_ID2  5
 #define ARM_RIGHT_ID3  6
 
-/* ==================== 位置模式速度 ==================== */
+/* ==================== 位置模式速度 — 各关节独立 ==================== */
 
-#define ARM_VEL_SLOW  0.4f    // rad/s, normal 模式
-#define ARM_VEL_FAST  0.6f    // rad/s, fast 模式
+/* ---- normal (slow) 模式 ---- */
+#define ARM_L1_VEL_SLOW  0.5f    // 左根
+#define ARM_L2_VEL_SLOW  0.85f    // 左中
+#define ARM_L3_VEL_SLOW  0.5f    // 左末
+#define ARM_R1_VEL_SLOW  0.5f    // 右根
+#define ARM_R2_VEL_SLOW  0.85f    // 右中
+#define ARM_R3_VEL_SLOW  0.5f    // 右末
+
+/* ---- fast 模式 ---- */
+#define ARM_L1_VEL_FAST  0.85f
+#define ARM_L2_VEL_FAST  1.35f
+#define ARM_L3_VEL_FAST  0.85f
+#define ARM_R1_VEL_FAST  0.85f
+#define ARM_R2_VEL_FAST  1.35f
+#define ARM_R3_VEL_FAST  0.85f
 
 /* ==================== 原点位置 (机械零位, rad) ==================== */
 
@@ -89,14 +103,13 @@ void arm_left_disable(CAN_HandleTypeDef *hcan);
 void arm_left_set(CAN_HandleTypeDef *hcan, float p1, float p2, float p3, float vel);
 
 /**
- * @brief 左臂位置更新 (自动模式用)
+ * @brief 左臂位置更新 (自动模式用, 各关节独立速度)
  * @param hcan  CAN2 handle
- * @param vel   位置模式速度 (rad/s)
+ * @param fast  1=fast模式 0=slow模式
  *
- * 从 uart_task 全局变量 left_pitch1/2/3 (mrad) 读取目标角度
- * 转换为 rad 后通过 pos_ctrl 发往 CAN2
+ * 使用 arm.h 中 ARM_L1/L2/L3_VEL_SLOW/FAST 宏控制各关节速度
  */
-void arm_left_update(CAN_HandleTypeDef *hcan, float vel);
+void arm_left_update(CAN_HandleTypeDef *hcan, bool fast);
 
 /* ==================== 右臂 API (镜像左臂) ==================== */
 
@@ -108,7 +121,7 @@ void arm_right_set(CAN_HandleTypeDef *hcan, float p1, float p2, float p3, float 
  * @brief 右臂位置更新 (自动模式用)
  * 从 uart_task 全局变量 right_pitch1/2/3 (mrad) → rad → CAN2
  */
-void arm_right_update(CAN_HandleTypeDef *hcan, float vel);
+void arm_right_update(CAN_HandleTypeDef *hcan, bool fast);
 
 /**
  * @brief CAN2 RX 回调: 解析 DM4340 电机反馈
