@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
@@ -50,7 +51,7 @@
 #define LIFT_H_PLACE_A 16.5f  /* 放方块高度 (CH6上/中) */
 #define LIFT_H_PLACE_B 0.0f  /* 放方块高度 (CH6下) */
 #define CH1_FINE_MAX   3.0f  /* CH1微调最大偏移 (吸方块) */
-#define CH1_PLACE_MAX  3.0f  /* CH1微调最大偏移 (放方块) */
+#define CH1_PLACE_MAX  5.0f  /* CH1微调最大偏移 (放方块) */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -153,8 +154,8 @@ void sbus_task(void *parameter)
                 {
                     ch7_ser_last = ch7;
                     static uint8_t ir_cmd[] = {0xA1, 0xF1, 0xCC, 0x01, 0xEE};
-                    HAL_UART_Transmit_DMA(&huart1, ir_cmd, 5);
-                    HAL_UART_Transmit_DMA(&huart2, ir_cmd, 5);
+                    HAL_UART_Transmit_DMA(&huart3, ir_cmd, 5);
+                    HAL_UART_Transmit_DMA(&huart6, ir_cmd, 5);
                 }
                 ch4_was_mid = ch4_is_mid;
             }
@@ -180,7 +181,7 @@ void sbus_task(void *parameter)
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
-                arm_update(&sbus_ch, sel, true);  /* 末端始终朝前 */
+                arm_update(&sbus_ch, sel, false); /* tip_45=false: 竖起45°兜 */
             }
             else if(ch_high(5)) /* 放方块模式 (CH6切换两档高度 + 机械臂末端朝前) */
             {
@@ -193,7 +194,7 @@ void sbus_task(void *parameter)
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
-                arm_update(&sbus_ch, sel, true);  /* ch6_high=true: 末端朝前 */
+                arm_update(&sbus_ch, sel, true);  /* tip_45=true: 竖起朝前 */
             }
             }  /* !ch_mid(4) */
 
@@ -289,6 +290,8 @@ int main(void)
   MX_UART4_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_USART3_UART_Init();
+  MX_USART6_UART_Init();
   /* USER CODE BEGIN 2 */
 	
 	if (xTaskCreate(start_task, "start_task", 256, NULL, 0, NULL) != pdPASS)

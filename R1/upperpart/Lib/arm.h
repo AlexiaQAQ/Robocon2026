@@ -9,8 +9,8 @@ void arm_init(void);
 void arm_enable(void);
 void arm_disable(void);
 
-/* CH5中位时调用: select_left=true左臂, ch6_high=3层 */
-void arm_update(SBUS_t *sbus, bool select_left, bool ch6_high);
+/* select_left=true左臂, tip_45=放方块模式(竖起朝前) / false=吸方块(竖起45°兜) */
+void arm_update(SBUS_t *sbus, bool select_left, bool tip_45);
 
 void arm_task(void *parameter);      /* 50Hz CAN发送 */
 
