@@ -47,8 +47,10 @@
 #define LIFT_H_3F   24.0f   /* 抬升 3层 */
 #define LIFT_H_2F   14.0f   /* 抬升 2层 (中位) */
 #define LIFT_H_1F   4.0f   /* 抬升 1层 */
-#define LIFT_H_PLACE 16.5f  /* 放方块高度 */
-#define CH1_FINE_MAX   3.0f  /* CH1连续微调最大偏移 */
+#define LIFT_H_PLACE_A 16.5f  /* 放方块高度 (CH6上/中) */
+#define LIFT_H_PLACE_B 0.0f  /* 放方块高度 (CH6下) */
+#define CH1_FINE_MAX   3.0f  /* CH1微调最大偏移 (吸方块) */
+#define CH1_PLACE_MAX  3.0f  /* CH1微调最大偏移 (放方块) */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -172,20 +174,23 @@ void sbus_task(void *parameter)
                 if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_FINE_MAX);
                 else if (ch1 < 972.0f)  offset =  Map(ch1,  972.0f,  326.0f, 0.0f, CH1_FINE_MAX);
 
-                float base = ch_high(6) ? LIFT_H_3F :
-                             ch_low(6)  ? LIFT_H_1F : LIFT_H_2F;
+                float base = ch_high(6) ? LIFT_H_1F :   /* 下拨→低 */
+                             ch_low(6)  ? LIFT_H_3F :   /* 上拨→高 */
+                                           LIFT_H_2F;   /* 中位→中 */
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
                 arm_update(&sbus_ch, sel, true);  /* 末端始终朝前 */
             }
-            else if(ch_high(5)) /* 放方块模式 (抬升15 + 机械臂末端朝前) */
+            else if(ch_high(5)) /* 放方块模式 (CH6切换两档高度 + 机械臂末端朝前) */
             {
                 float ch1 = (float)sbus_ch.ch[1];
                 float offset = 0.0f;
-                if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_FINE_MAX);
-                else if (ch1 < 972.0f)  offset =  Map(ch1,  972.0f,  326.0f, 0.0f, CH1_FINE_MAX);
-                lift_update(LIFT_H_PLACE + offset);
+                if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_PLACE_MAX);
+                else if (ch1 < 972.0f)  offset =  Map(ch1,  972.0f,  326.0f, 0.0f, CH1_PLACE_MAX);
+
+                float base = ch_low(6) ? LIFT_H_PLACE_A : LIFT_H_PLACE_B;
+                lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
                 arm_update(&sbus_ch, sel, true);  /* ch6_high=true: 末端朝前 */
