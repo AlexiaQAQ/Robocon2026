@@ -124,12 +124,12 @@ static void system_enable_handler(void)
 
 	if (ch4 && !last_ch4)
 	{
-		/* CH4 rising edge: enable all subsystems */
-		sys_enabled = true;
+		/* CH4 rising edge: 先使能电机, 后置标志 (防止控帧先于使能到达) */
 		chassis_enable(&hcan1);               // CAN1: 全向轮×4 + 抬升×4
 		arm_left_enable(&hcan2);                // CAN2: 左臂 ID 1-3
 		arm_right_enable(&hcan2);               // CAN2: 右臂 ID 4-6
 		dm_enable_mcp2515(&hcan3, &gripper_flip_motor);   // hcan3: 夹爪翻转电机
+		sys_enabled = true;
 	}
 	else if (!ch4 && last_ch4)
 	{
@@ -393,7 +393,7 @@ void start_task(void *parameter)
 		mcp2515_sys_init(&hcan3, &hspi1, GPIOA, GPIO_PIN_4);//电磁阀和翻转电机
 
 		/* prio: chassis(3) > sbus(2) > arm/up_cs(1) > uart/led(0) */
-		xTaskCreate(led_task,     "led_task",      56, NULL, 2, NULL);
+		xTaskCreate(led_task,     "led_task",     128, NULL, 2, NULL);
 		xTaskCreate(sbus_task,    "remote_task",  256, NULL, 1, NULL);
 		xTaskCreate(uart_task,    "uart_task",    1024, NULL, 0, NULL);
 		xTaskCreate(chassis_task, "chassis_task", 512, NULL, 0, NULL);
