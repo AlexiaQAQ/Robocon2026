@@ -11,7 +11,9 @@ extern bool g_sys_enabled;
 #define LIFT_RETURN_TARGET 0.2f    /* 回零高度 */
 #define LIFT_MAX    29.0f          /* 抬升硬限幅上限 */
 #define LIFT_MIN     0.2f          /* 抬升硬限幅下限 */
-#define LIFT_SLEW    1.0f          /* 每20ms最大步进, 防切换抽搐 */
+#define LIFT_SLEW_SLOW   0.5f     /* 微调步进 */
+#define LIFT_SLEW_FAST   2.5f     /* 切换步进 */
+#define LIFT_SLEW_GAP    3.0f     /* >此差值用快步进 */
 
 static motor_t  lift_motor[4];
 static float    lift_target = LIFT_RETURN_TARGET;
@@ -58,11 +60,14 @@ void lift_task(void *parameter)
             if(target > LIFT_MAX) target = LIFT_MAX;
             if(target < LIFT_MIN) target = LIFT_MIN;
 
-            /* 斜率限制: 逐步逼近目标, 防模式切换抽搐 */
-            if(target > g_lift_cmd + LIFT_SLEW)
-                g_lift_cmd += LIFT_SLEW;
-            else if(target < g_lift_cmd - LIFT_SLEW)
-                g_lift_cmd -= LIFT_SLEW;
+            /* 自适应斜率: 大跳快步进, 微调慢步进 */
+            float gap = target - g_lift_cmd;
+            float slew = ((gap < 0 ? -gap : gap) > LIFT_SLEW_GAP) ? LIFT_SLEW_FAST : LIFT_SLEW_SLOW;
+
+            if(gap > slew)
+                g_lift_cmd += slew;
+            else if(gap < -slew)
+                g_lift_cmd -= slew;
             else
                 g_lift_cmd = target;
 

@@ -2,32 +2,29 @@
 #include "arm.h"
 #include "cmsis_os.h"
 
-#define ARM_CAN    hcan2
-#define ARM_SPEED  0.5f
+#define ARM_CAN         hcan2
+#define ARM_SPEED_UP    1.3f   /* 抬起速度 */
+#define ARM_SPEED_DOWN  1.3f   /* 放下速度 */
 
 /* 关节限幅 */
 #define L_ROOT_MIN  -1.57f
 #define L_ROOT_MAX   0.0f
 #define L_TIP_MIN   -1.57f
-#define L_TIP_MAX    1.57f
+#define L_TIP_MAX    0.0f
 #define R_ROOT_MIN   0.0f
 #define R_ROOT_MAX   1.57f
-#define R_TIP_MIN   -1.57f
+#define R_TIP_MIN    0.0f
 #define R_TIP_MAX    1.57f
 
 /* 目标位置 */
 #define L_ROOT_UP    -1.57f   /* 左根竖起 */
 #define L_ROOT_DOWN   0.0f    /* 左根水平 */
-#define L_TIP_UP      0.0f    /* 左末顺臂 (臂放平时朝前) */
-#define L_TIP_DOWN   -1.57f   /* 左末朝地 */
-#define L_TIP_UP_FWD -1.57f   /* 左末竖起朝前 */
-#define L_TIP_UP_45  -0.785f  /* 左末竖起45°兜方块 */
+#define L_TIP_DOWN   -1.57f   /* 左末朝地 (暂未使用) */
+#define L_TIP_UP_FWD -0.785f  /* 左末45° (竖起时) */
 #define R_ROOT_UP     1.57f   /* 右根竖起 */
 #define R_ROOT_DOWN   0.0f    /* 右根水平 */
-#define R_TIP_UP      0.0f    /* 右末顺臂 (臂放平时朝前) */
-#define R_TIP_DOWN    1.57f   /* 右末朝地 */
-#define R_TIP_UP_FWD  1.57f   /* 右末竖起朝前 */
-#define R_TIP_UP_45   0.785f  /* 右末竖起45°兜方块 */
+#define R_TIP_DOWN    1.57f   /* 右末朝地 (暂未使用) */
+#define R_TIP_UP_FWD  0.785f  /* 右末45° (竖起时) */
 
 static motor_t arm_motor[4];    /* [0]左根4340 [1]左末4310 [2]右根4340 [3]右末4310 */
 
@@ -111,24 +108,24 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
     if(g_arm_L == ARM_DOWN)
     {
         g_L_root = L_ROOT_DOWN;
-        g_L_tip  = L_TIP_UP;                     /* 放下→末端朝前 */
+        g_L_tip  = tip_45 ? 0.0f : L_TIP_DOWN;  /* 朝前(0°) / 朝地 */
     }
     else  /* ARM_UP */
     {
         g_L_root = L_ROOT_UP;
-        g_L_tip  = tip_45 ? L_TIP_UP_FWD : L_TIP_UP_45;  /* 朝前 / 45°兜 */
+        g_L_tip  = L_TIP_UP_FWD;  /* 45°朝天 */
     }
 
     /* 右臂目标 */
     if(g_arm_R == ARM_DOWN)
     {
         g_R_root = R_ROOT_DOWN;
-        g_R_tip  = R_TIP_UP;                     /* 放下→末端朝前 */
+        g_R_tip  = tip_45 ? 0.0f : R_TIP_DOWN;
     }
     else
     {
         g_R_root = R_ROOT_UP;
-        g_R_tip  = tip_45 ? R_TIP_UP_FWD : R_TIP_UP_45;  /* 朝前 / 45°兜 */
+        g_R_tip  = R_TIP_UP_FWD;  /* 45°朝天 */
     }
 }
 
@@ -140,17 +137,19 @@ void arm_task(void *parameter)
     {
         if(g_sys_enabled)
         {
-            float r;
-            /* 左根: ID1, 左末: ID2 */
+            float r, spd;
+            /* 左臂: ID1根, ID2末 */
+            spd = (g_arm_L == ARM_DOWN) ? ARM_SPEED_DOWN : ARM_SPEED_UP;
             r = clampf(g_L_root, L_ROOT_MIN, L_ROOT_MAX);
-            dm_pos_ctrl(&ARM_CAN, 1, r, ARM_SPEED); vTaskDelay(2);
+            dm_pos_ctrl(&ARM_CAN, 1, r, spd); vTaskDelay(2);
             r = clampf(g_L_tip, L_TIP_MIN, L_TIP_MAX);
-            dm_pos_ctrl(&ARM_CAN, 2, r, ARM_SPEED); vTaskDelay(2);
-            /* 右根: ID3, 右末: ID4 */
+            dm_pos_ctrl(&ARM_CAN, 2, r, spd); vTaskDelay(2);
+            /* 右臂: ID3根, ID4末 */
+            spd = (g_arm_R == ARM_DOWN) ? ARM_SPEED_DOWN : ARM_SPEED_UP;
             r = clampf(g_R_root, R_ROOT_MIN, R_ROOT_MAX);
-            dm_pos_ctrl(&ARM_CAN, 3, r, ARM_SPEED); vTaskDelay(2);
+            dm_pos_ctrl(&ARM_CAN, 3, r, spd); vTaskDelay(2);
             r = clampf(g_R_tip, R_TIP_MIN, R_TIP_MAX);
-            dm_pos_ctrl(&ARM_CAN, 4, r, ARM_SPEED);
+            dm_pos_ctrl(&ARM_CAN, 4, r, spd);
         }
         vTaskDelay(20);
     }

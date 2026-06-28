@@ -18,8 +18,8 @@ void grab_reset(void);
 /* CH10 全局控制齿条 (所有模式) */
 void grab_update_rack(uint16_t ch10);
 
-/* 抓取模式下抬升目标: G_LIFT_RISE→对接基准+CH1微调, 其余→0.2 */
-float grab_lift_target(void);
+/* 抓取模式下抬升目标: 步骤6→CH6选对接/回零, 其余→0.2 */
+float grab_lift_target(uint16_t ch6);
 
 void grab_task(void *parameter);       /* 50Hz CAN发送 */
 

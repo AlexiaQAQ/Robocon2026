@@ -45,6 +45,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SBUS_TIMEOUT_MS 100
+#define MODE_DEBOUNCE_MS 50      /* CH5模式消抖 */
 #define LIFT_H_3F   24.0f   /* 抬升 3层 */
 #define LIFT_H_2F   14.0f   /* 抬升 2层 (中位) */
 #define LIFT_H_1F   4.0f   /* 抬升 1层 */
@@ -65,7 +66,8 @@
 uint16_t led_buf = 0x0001;
 static uint32_t last_sbus_tick = 0;
 static bool     last_ch4 = false;
-bool            g_sys_enabled = false;
+bool            g_sys_enabled  = false;
+static bool     g_was_enabled  = false;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -99,11 +101,13 @@ static void system_enable_handler(void)
         lift_enable();
         arm_enable();
         grab_enable();
-        g_sys_enabled = true;
+        g_sys_enabled  = true;
+        g_was_enabled  = true;
     }
     else if(!ch4 && last_ch4)               /* 下沿 -> 锁车 */
     {
         g_sys_enabled = false;
+        vTaskDelay(5);                       /* 等CAN邮箱清空 */
         lift_disable();
         arm_disable();
         grab_disable();
@@ -131,6 +135,7 @@ void sbus_task(void *parameter)
                 if(g_sys_enabled)
                 {
                     g_sys_enabled = false;
+                    vTaskDelay(5);               /* 等CAN邮箱清空 */
                     lift_disable();
                     arm_disable();
                     grab_disable();
@@ -162,14 +167,38 @@ void sbus_task(void *parameter)
 
             if(!ch_mid(4))      /* CH4 中位时独占串口模式, 跳过 CH5 调度 */
             {
-            if(ch_low(5))       /* 抓取模式 (含抬升回零/R2对接) */
+            /* ---- CH5 模式消抖 ---- */
+            typedef enum { M_NONE, M_GRAB, M_SUCTION, M_PLACE } mode_t;
+            static mode_t    g_mode_cur = M_NONE;
+            static mode_t    g_mode_new = M_NONE;
+            static uint32_t  g_mode_tick = 0;
+
+            mode_t mode_raw;
+            if(ch_low(5))       mode_raw = M_GRAB;
+            else if(ch_mid(5))  mode_raw = M_SUCTION;
+            else if(ch_high(5)) mode_raw = M_PLACE;
+            else                mode_raw = M_NONE;
+
+            if(mode_raw != g_mode_new)
             {
-                lift_update(grab_lift_target());
-                grab_update(&sbus_ch);
+                g_mode_new  = mode_raw;
+                g_mode_tick = xTaskGetTickCount();
             }
-            else if(ch_mid(5))  /* 抬升高度 + 机械臂 */
+            if(g_mode_new != g_mode_cur &&
+               (xTaskGetTickCount() - g_mode_tick) > pdMS_TO_TICKS(MODE_DEBOUNCE_MS))
             {
-                /* CH1 摇杆连续微调抬升 (中位死区±20) */
+                g_mode_cur = g_mode_new;
+            }
+
+            switch(g_mode_cur)
+            {
+            case M_GRAB:   /* 抓取模式 (含抬升回零/R2对接) */
+                lift_update(grab_lift_target(sbus_ch.ch[6]));
+                grab_update(&sbus_ch);
+                break;
+
+            case M_SUCTION: /* 吸方块: CH6选层高+CH1微调+机械臂 */
+                {
                 float ch1 = (float)sbus_ch.ch[1];
                 float offset = 0.0f;
                 if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_FINE_MAX);
@@ -181,10 +210,12 @@ void sbus_task(void *parameter)
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
-                arm_update(&sbus_ch, sel, false); /* tip_45=false: 竖起45°兜 */
-            }
-            else if(ch_high(5)) /* 放方块模式 (CH6切换两档高度 + 机械臂末端朝前) */
-            {
+                arm_update(&sbus_ch, sel, true);
+                break;
+                }
+
+            case M_PLACE:  /* 放方块: CH6两档+CH1微调+机械臂 */
+                {
                 float ch1 = (float)sbus_ch.ch[1];
                 float offset = 0.0f;
                 if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_PLACE_MAX);
@@ -194,7 +225,11 @@ void sbus_task(void *parameter)
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[11] > 1000);
-                arm_update(&sbus_ch, sel, true);  /* tip_45=true: 竖起朝前 */
+                arm_update(&sbus_ch, sel, true);
+                break;
+                }
+
+            default: break;
             }
             }  /* !ch_mid(4) */
 
@@ -208,6 +243,20 @@ void sbus_task(void *parameter)
             if(g_sys_enabled)
             {
                 g_sys_enabled = false;
+                vTaskDelay(5);               /* 等CAN邮箱清空 */
+                lift_disable();
+                arm_disable();
+                grab_disable();
+            }
+        }
+
+        /* 失能后每200ms重发disable, 确保电机收到 */
+        if(!g_sys_enabled && g_was_enabled)
+        {
+            static uint32_t g_retry_tick = 0;
+            if((xTaskGetTickCount() - g_retry_tick) > pdMS_TO_TICKS(200))
+            {
+                g_retry_tick = xTaskGetTickCount();
                 lift_disable();
                 arm_disable();
                 grab_disable();
