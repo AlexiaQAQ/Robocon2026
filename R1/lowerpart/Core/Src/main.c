@@ -82,7 +82,7 @@ bool sys_enabled = false;
 static bool last_ch4 = false;
 
 /* ---- 航向角 PID 参数 (Keil Watch 窗口可实时修改) ---- */
-float yaw_gain[3]  = {0.2f, 0.0f, 0.0f};  /* Kp, Ki, Kd */
+float yaw_gain[3]  = {0.18f, 0.0f, 0.1f};  /* Kp, Ki, Kd */
 float yaw_max_out  = 20.0f;                /* PID 输出限幅 (rad/s) */
 float yaw_max_iout = 3.0f;                 /* 积分限幅 */
 float yaw_target   = 0.0f;                 /* 目标航向角 (°) */
@@ -122,9 +122,14 @@ bool ch_down(int16_t ch)
 	return sbus_ch.ch[ch] > 1600;
 }
 
+static bool ch4_enable(void)
+{
+	return sbus_ch.ch[4] > 650;   /* 中位或高位 → 使能; 低位 → 锁车 */
+}
+
 static void system_enable_handler(void)
 {
-	bool ch4 = sbus_connected() && ch_down(4);
+	bool ch4 = sbus_connected() && ch4_enable();
 
 	if (ch4 && !last_ch4)
 	{
