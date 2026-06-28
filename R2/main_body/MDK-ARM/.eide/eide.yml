@@ -219,10 +219,13 @@ targets:
           afterBuildTasks: []
           asm-compiler:
             $use: asm-auto
+            defines: []
+            misc-controls: ""
           beforeBuildTasks: []
           c/cpp-compiler:
             language-c: c99
             language-cpp: c++11
+            link-time-optimization: false
             one-elf-section-per-function: true
             optimization: level-3
             short-enums#wchar: true
@@ -235,6 +238,9 @@ targets:
               - .bin
             misc-controls: --diag_suppress=L6329
             output-format: elf
+            ro-base: ""
+            rw-base: ""
+            xo-base: ""
         scatterFilePath: ""
         storageLayout:
           RAM:
