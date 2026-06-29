@@ -30,6 +30,7 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "bsp_can.h"
 #include "sbus_set.h"
@@ -46,6 +47,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+//#define YAW_HOLD_ENABLE   /* 取消注释 → 开启航向角保持 */
+
 #define led1(dat) HAL_GPIO_WritePin(GPIOG,GPIO_PIN_1,(GPIO_PinState)dat)
 #define led2(dat) HAL_GPIO_WritePin(GPIOG,GPIO_PIN_2,(GPIO_PinState)dat)
 #define led3(dat) HAL_GPIO_WritePin(GPIOG,GPIO_PIN_3,(GPIO_PinState)dat)
@@ -82,8 +85,8 @@ bool sys_enabled = false;
 static bool last_ch4 = false;
 
 /* ---- 航向角 PID 参数 (Keil Watch 窗口可实时修改) ---- */
-float yaw_gain[3]  = {0.18f, 0.0f, 0.1f};  /* Kp, Ki, Kd */
-float yaw_max_out  = 20.0f;                /* PID 输出限幅 (rad/s) */
+float yaw_gain[3]  = {0.6f, 0.0f, 0.0f};  /* Kp, Ki, Kd */
+float yaw_max_out  = 23.0f;                /* PID 输出限幅 (rad/s) */
 float yaw_max_iout = 3.0f;                 /* 积分限幅 */
 float yaw_target   = 0.0f;                 /* 目标航向角 (°) */
 /* USER CODE END PV */
@@ -163,7 +166,6 @@ void remote_task(void *parameter)
 	static PidTypeDef  yaw_pid;
 	static bool        yaw_inited   = false;
 	static bool        last_enabled = false;
-	static bool        yaw_captured = false;
 
 	if (!yaw_inited)
 	{
@@ -173,7 +175,6 @@ void remote_task(void *parameter)
 
 	while(1)
 	{
-		/* 每周期同步全局增益 → Keil Watch 改值即时生效 */
 		yaw_pid.Kp = yaw_gain[0];
 		yaw_pid.Ki = yaw_gain[1];
 		yaw_pid.Kd = yaw_gain[2];
@@ -214,24 +215,21 @@ void remote_task(void *parameter)
 			float stick_vw = expo_map(ch_val, 326, 1659, 5, 10.0f);
 			if (stick_vw != 0.0f)
 			{
-				/* 摇杆偏转 → 开环速度控制, 跟手 */
-				yaw_captured = false;
+				/* 摇杆偏转 → 开环跟手, 记录目标 */
+				yaw_target   = wit_yaw;
 				set_vw       = stick_vw;
 				PID_clear(&yaw_pid);
 			}
 			else
 			{
-				/* 摇杆中位 → 松手瞬间抓取目标, PID 锁航向 */
-				if (!yaw_captured)
-				{
-					yaw_target   = wit_yaw;
-					yaw_captured = true;
-					PID_clear(&yaw_pid);
-				}
+				/* 中位 → 3° 死区 + PID 锁航向 */
 				float fdb = wit_yaw;
 				while (fdb - yaw_target >  180.0f) fdb -= 360.0f;
 				while (fdb - yaw_target < -180.0f) fdb += 360.0f;
-				set_vw = -PID_Calc(&yaw_pid, fdb, yaw_target);
+				if (fabsf(fdb - yaw_target) < 3.0f)
+					set_vw = 0;
+				else
+					set_vw = -PID_Calc(&yaw_pid, fdb, yaw_target);
 			}
 		}
 
