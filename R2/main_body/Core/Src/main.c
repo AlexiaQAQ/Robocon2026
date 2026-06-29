@@ -345,19 +345,14 @@ void arm_task(void *parameter)
 	{
 		if (sys_enabled)
 		{
-			if (!ch_high(5))
-			{
-				/* 手动模式: 双机械臂回原点 */
-				arm_left_set(&hcan2,  ARM_L_ORIGIN_P1, ARM_L_ORIGIN_P2, ARM_L_ORIGIN_P3, ARM_L1_VEL_SLOW);
-				arm_right_set(&hcan2, ARM_R_ORIGIN_P1, ARM_R_ORIGIN_P2, ARM_R_ORIGIN_P3, ARM_R1_VEL_SLOW);
-			}
-			else
+			if (ch_high(5))
 			{
 				/* 自动模式: 各关节独立速度 (arm.h) */
 				bool fast = (lift_mode == 1);
 				arm_left_update(&hcan2, fast);
 				arm_right_update(&hcan2, fast);
 			}
+			/* 手动模式: 保持当前位置 (POS电机自动保持) */
 		}
 
 		vTaskDelay(10);
