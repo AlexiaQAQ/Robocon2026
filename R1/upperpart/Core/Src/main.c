@@ -159,6 +159,8 @@ void sbus_task(void *parameter)
                 {
                     ch7_ser_last = ch7;
                     static uint8_t ir_cmd[] = {0xA1, 0xF1, 0xCC, 0x01, 0xEE};
+                    HAL_UART_Transmit_DMA(&huart1, ir_cmd, 5);
+                    HAL_UART_Transmit_DMA(&huart2, ir_cmd, 5);
                     HAL_UART_Transmit_DMA(&huart3, ir_cmd, 5);
                     HAL_UART_Transmit_DMA(&huart6, ir_cmd, 5);
                 }
