@@ -85,8 +85,8 @@ bool sys_enabled = false;
 static bool last_ch4 = false;
 
 /* ---- 航向角 PID 参数 (Keil Watch 窗口可实时修改) ---- */
-float yaw_gain[3]  = {0.6f, 0.0f, 0.0f};  /* Kp, Ki, Kd */
-float yaw_max_out  = 23.0f;                /* PID 输出限幅 (rad/s) */
+float yaw_gain[3]  = {0.6f, 0.0f, 0.006f};  /* Kp, Ki, Kd */
+float yaw_max_out  = 20.0f;                /* PID 输出限幅 (rad/s) */
 float yaw_max_iout = 3.0f;                 /* 积分限幅 */
 float yaw_target   = 0.0f;                 /* 目标航向角 (°) */
 /* USER CODE END PV */
@@ -226,7 +226,7 @@ void remote_task(void *parameter)
 				float fdb = wit_yaw;
 				while (fdb - yaw_target >  180.0f) fdb -= 360.0f;
 				while (fdb - yaw_target < -180.0f) fdb += 360.0f;
-				if (fabsf(fdb - yaw_target) < 3.0f)
+				if (fabsf(fdb - yaw_target) < 0.5f)
 					set_vw = 0;
 				else
 					set_vw = -PID_Calc(&yaw_pid, fdb, yaw_target);
@@ -269,7 +269,7 @@ void start_task(void *parameter)
 
 		xTaskCreate(led_task,"led_task",128,NULL,0,NULL);
 		xTaskCreate(remote_task,"remote_task",512,NULL,0,NULL);
-		xTaskCreate(chassis_task,"chassis_task",512,NULL,0,NULL);
+		xTaskCreate(chassis_task,"chassis_task",1024,NULL,0,NULL);
 
 		vTaskDelete(NULL);
 	}
