@@ -6,20 +6,21 @@
 
 #define LIFT_CAN    hcan1
 #define RACK_SPEED  6.0f           /* 2325齿条 */
-#define FLIP_DOWN_SPEED  6.0f      /* 4310翻下去 */
-#define FLIP_UP_SPEED    2.0f      /* 4310翻上来 */
-#define FLIP_UP_POS      0.0f      /* 4310翻上位置 */
-#define FLIP_DOWN_POS   -1.8f      /* 4310翻下取杆位置 */
-#define FLIP_TOGGLE_POS -0.4f    /* 4310对接翻转位置 */
-#define FLIP_MAX         0.0f      /* 4310翻转上限 */
-#define FLIP_MIN        -2.0f      /* 4310翻转下限 */
+#define FLIP_DOWN_SPEED  10.0f      /* 4340翻下去 */
+#define FLIP_UP_SPEED    2.0f      /* 4340翻上来 */
+#define FLIP_TOGGLE_SPD  0.5f      /* 4340对接翻转速度 */
+#define FLIP_UP_POS      0.0f      /* 4340翻上位置 */
+#define FLIP_DOWN_POS   -1.8f      /* 4340翻下取杆位置 */
+#define FLIP_TOGGLE_POS -0.4f    /* 4340对接翻转位置 */
+#define FLIP_MAX         0.0f      /* 4340翻转上限 */
+#define FLIP_MIN        -2.0f      /* 4340翻转下限 */
 #define RACK_ZERO_TOL    0.2f      /* 齿条回零容差, 开爪前检查 */
 #define GRAB_H_HIGH      25.0f     /* 高位 (CH6上拨) */
-#define GRAB_H_DOCK      14.15f    /* 对接 (CH6中位) */
+#define GRAB_H_DOCK      14.2f    /* 对接 (CH6中位) */
 #define LIFT_FINE_STEP    0.05f    /* CH1每次微调步长 */
 #define LIFT_FINE_MAX     3.0f     /* CH1微调最大累积 */
 
-static motor_t grab_motor[2];       /* [0]=4310翻转 ID5, [1]=2325齿条 ID6 */
+static motor_t grab_motor[2];       /* [0]=4340翻转 ID5, [1]=2325齿条 ID6 */
 
 /* ---- 工序状态机 ---- */
 typedef enum {
@@ -49,7 +50,7 @@ extern bool g_sys_enabled;
 
 void grab_init(void)
 {
-    dm_init(&grab_motor[0], 5, DM_MODE_POS, DM_4310);
+    dm_init(&grab_motor[0], 5, DM_MODE_POS, DM_4340);
     dm_init(&grab_motor[1], 6, DM_MODE_POS, DM_2325);
 }
 
@@ -151,7 +152,7 @@ void grab_update(SBUS_t *sbus)
 
         case G_LIFT_RISE:     /* CH6高度 + CH7翻转 + CH10手动 */
             g_flip = g_flip_toggle ? FLIP_TOGGLE_POS : FLIP_UP_POS;
-            g_flip_speed = FLIP_UP_SPEED;
+            g_flip_speed = FLIP_TOGGLE_SPD;
             break;
 
         default:

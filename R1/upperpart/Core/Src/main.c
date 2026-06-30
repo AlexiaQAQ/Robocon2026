@@ -46,13 +46,13 @@
 /* USER CODE BEGIN PD */
 #define SBUS_TIMEOUT_MS 100
 #define MODE_DEBOUNCE_MS 50      /* CH5模式消抖 */
-#define LIFT_H_3F   24.0f   /* 抬升 3层 */
-#define LIFT_H_2F   14.0f   /* 抬升 2层 (中位) */
-#define LIFT_H_1F   4.0f   /* 抬升 1层 */
-#define LIFT_H_PLACE_A 16.5f  /* 放方块高度 (CH6上/中) */
+#define LIFT_H_3F   28.0f   /* 抬升 3层 */
+#define LIFT_H_2F   18.0f   /* 抬升 2层 (中位) */
+#define LIFT_H_1F   8.0f   /* 抬升 1层 */
+#define LIFT_H_PLACE_A 20.0f  /* 放方块高度 (CH6上/中) */
 #define LIFT_H_PLACE_B 0.0f  /* 放方块高度 (CH6下) */
 #define CH1_FINE_MAX   3.0f  /* CH1微调最大偏移 (吸方块) */
-#define CH1_PLACE_MAX  5.0f  /* CH1微调最大偏移 (放方块) */
+#define CH1_PLACE_MAX  6.5f  /* CH1微调最大偏移 (放方块) */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/

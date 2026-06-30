@@ -3,7 +3,7 @@
 #include "cmsis_os.h"
 
 #define ARM_CAN         hcan2
-#define ARM_SPEED_UP    1.3f   /* 抬起速度 */
+#define ARM_SPEED_UP    2.0f   /* 抬起速度 */
 #define ARM_SPEED_DOWN  1.3f   /* 放下速度 */
 
 /* 关节限幅 */
