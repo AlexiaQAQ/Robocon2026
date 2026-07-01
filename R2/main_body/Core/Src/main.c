@@ -99,7 +99,7 @@ void MX_FREERTOS_Init(void);
 
 /* ====================== Helpers ====================== */
 
-static inline bool sbus_frame_valid(void)
+bool sbus_frame_valid(void)
 {
 	return (sbus_rx_buf[23] == 0x00 && sbus_rx_buf[0] == 0x0f && sbus_rx_buf[24] == 0x00);
 }
@@ -138,8 +138,8 @@ static void system_enable_handler(void)
 		chassis_disable(&hcan1);              // CAN1: 全向轮×4 + 抬升×4
 		arm_left_disable(&hcan2);               // CAN2: 左臂 ID 1-3
 		arm_right_disable(&hcan2);              // CAN2: 右臂 ID 4-6
-		/* 安全释放: 打开夹爪 + 关闭吸盘, 先发后失能 */
-		YV1(0);                                 // 夹爪打开
+		/* 安全释放: 夹紧夹爪 + 松开吸盘, 先发后失能 */
+		YV1(0);                                 // 夹爪夹紧
 		YV2(0);                                 // 左吸盘松开
 		YV3(0);                                 // 右吸盘松开
 		YV_flash_mcp2515(&hcan3);               // 发送电磁阀状态
@@ -186,8 +186,8 @@ void sbus_task(void *parameter)
 		/* Update system enable state from CH4 */
 		system_enable_handler();
 
-		/* Manual mode: map remote channels to velocities */
-		if (sys_enabled && !ch_high(5))
+		/* Manual mode: map remote channels to velocities (仅帧有效时, 防干扰误切串口) */
+		if (sys_enabled && sbus_frame_valid() && !ch_high(5))
 		{
 			int16_t ch_val;
 
@@ -211,7 +211,7 @@ void sbus_task(void *parameter)
 				int16_t ch6_val = sbus_ch.ch[6];
 				bool ch7_now = sbus_ch.ch[7] > 1700;
 
-				if (ch7_now != last_ch7_state)
+				if (sbus_frame_valid() && ch7_now != last_ch7_state)
 				{
 					if (ch6_val < 632)              // CH6 低档 ~240: 翻转电机
 					{
@@ -265,9 +265,9 @@ void up_cs_task(void *parameter)
 			float lift_vel;     // 抬升速度, 由 lift_mode 控制
 			float flip_vel;     // 夹爪翻转速度, 手动慢/自动快
 
-			if (!ch_high(5))
+			if (sbus_frame_valid() && !ch_high(5))
 			{
-				/* 手动模式升降控制:
+				/* 手动模式升降控制 (仅帧有效):
 				   CH6高(>1700): CH8旋钮同时控制前后升降 (0~420mm)
 				   CH6中/低:     保持当前高度不变 (避免旋钮瞬跳) */
 				if (ch_high(6))
@@ -284,7 +284,7 @@ void up_cs_task(void *parameter)
 				lift_vel = LIFT_VEL_SLOW;             // 手动模式慢速抬升
 				flip_vel = GRIPPER_FLIP_VEL_SLOW;     // 手动模式慢速翻转
 			}
-			else
+			else if (sbus_frame_valid())
 			{
 				/* Auto: 串口协议控制, 前后分组 */
 				lift_set(0, (float)lift_front_target);  // FR
@@ -337,15 +337,14 @@ void arm_task(void *parameter)
 {
 	/*
 	 * 左右双机械臂控制 (CAN2, DM4340 位置模式):
-	 *   手动模式: 双机械臂回原点
-	 *   自动模式: 左臂串口 left_pitch1~3 (ID2方向已适配取反)
-	 *             右臂保持原点 (暂不接入串口)
+	 *   手动模式: 保持当前位置 (POS电机自动保持)
+	 *   自动模式: 串口协议控制, 各关节独立速度
 	 */
 	while (1)
 	{
 		if (sys_enabled)
 		{
-			if (ch_high(5))
+			if (sbus_frame_valid() && ch_high(5))
 			{
 				/* 自动模式: 各关节独立速度 (arm.h) */
 				bool fast = (lift_mode == 1);
@@ -353,6 +352,7 @@ void arm_task(void *parameter)
 				arm_right_update(&hcan2, fast);
 			}
 			/* 手动模式: 保持当前位置 (POS电机自动保持) */
+			vTaskDelay(50);
 		}
 
 		vTaskDelay(10);
@@ -387,7 +387,7 @@ void start_task(void *parameter)
 
 		mcp2515_sys_init(&hcan3, &hspi1, GPIOA, GPIO_PIN_4);//电磁阀和翻转电机
 
-		/* prio: chassis(3) > sbus(2) > arm/up_cs(1) > uart/led(0) */
+		/* prio: led(2) > sbus(1) > chassis/up_cs/arm/uart(0) */
 		xTaskCreate(led_task,     "led_task",     128, NULL, 2, NULL);
 		xTaskCreate(sbus_task,    "remote_task",  256, NULL, 1, NULL);
 		xTaskCreate(uart_task,    "uart_task",    1024, NULL, 0, NULL);
@@ -442,8 +442,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 	if (xTaskCreate(start_task, "start_task", 256, NULL, 0, NULL) != pdPASS)
 	{
-		while (1)
-			;
+		while (1);
 	}
 
   /* USER CODE END 2 */

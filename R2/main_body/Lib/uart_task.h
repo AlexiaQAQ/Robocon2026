@@ -13,6 +13,7 @@ extern float set_vx, set_vy, set_vw;
 /* Shared system state (defined in main.c) */
 extern bool sys_enabled;
 bool ch_high(int ch);
+bool sbus_frame_valid(void);
 
 /* ==================== 协议常量 (rc26_vehicle_serial_protocol_final.md) ==================== */
 

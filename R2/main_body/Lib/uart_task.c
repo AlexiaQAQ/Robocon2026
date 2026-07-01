@@ -235,7 +235,7 @@ void uart_task(void *parameter)
 {
     while (1)
     {
-        if (sys_enabled && ch_high(5))
+        if (sys_enabled && sbus_frame_valid() && ch_high(5))
         {
             parse_ctrl_frame();
 
