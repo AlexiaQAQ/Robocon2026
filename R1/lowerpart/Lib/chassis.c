@@ -12,8 +12,6 @@
 #include "can.h"
 #include "cmsis_os.h"
 
-static const uint16_t wheel_id[4] = {1, 2, 3, 4};
-
 /* ---- 初始化 ---- */
 void chassis_init(void)
 {
@@ -68,21 +66,20 @@ void chassis_update(void)
     motor_out[1] = ( vx_s - vy_s + vw_s);
 
     // BL: 45° 左后安装
-    motor_out[2] = ( vx_s + vy_s + vw_s);
+    motor_out[2] = (-vx_s + vy_s + vw_s);
 
     // FL: 45° 右后安装
-    motor_out[3] = (-vx_s + vy_s + vw_s);
+    motor_out[3] = ( vx_s + vy_s + vw_s);
 
-    // MIT + kp=0 速度控制: kd 提供阻尼, 比纯 SPD 模式平顺
+    // MIT 速度模式: kp=0 纯速度控制, kd 提供阻尼
     for (int i = 0; i < 4; i++)
     {
-//        dm_mit_ctrl(&hcan1, &dm_motor[i],
-//                     0.0f,            // pos = 0
-//                     motor_out[i],    // vel = 目标角速度 (rad/s)
-//                     0.0f,            // kp = 0
-//                     CHASSIS_TORQUE,  // kd = 阻尼
-//                     0.0f);           // torque = 0
-		dm_spd_ctrl(&hcan1, wheel_id[i], motor_out[i]);
+        dm_mit_ctrl(&hcan1, &dm_motor[i],
+                     0.0f,            // pos = 0
+                     motor_out[i],    // vel = 目标角速度 (rad/s)
+                     0.0f,            // kp = 0 (纯速度)
+                     CHASSIS_TORQUE,  // kd = 阻尼
+                     0.0f);           // torque = 0
         vTaskDelay(1);
     }
 }
