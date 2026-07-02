@@ -290,7 +290,7 @@ void start_task(void *parameter)
     arm_init();
     grab_init();
 
-    xTaskCreate(led_task,  "led_task",   56, NULL, 0, NULL);
+    xTaskCreate(led_task,  "led_task",  128, NULL, 0, NULL);
     xTaskCreate(sbus_task, "sbus_task", 512, NULL, 0, NULL);
     xTaskCreate(lift_task, "lift_task", 512, NULL, 0, NULL);
     xTaskCreate(arm_task,  "arm_task",  256, NULL, 0, NULL);
