@@ -5,16 +5,18 @@
 #include "cmsis_os.h"
 
 #define LIFT_CAN    hcan1
-#define RACK_SPEED  6.0f           /* 2325齿条 */
-#define FLIP_DOWN_SPEED  10.0f      /* 4340翻下去 */
-#define FLIP_UP_SPEED    2.0f      /* 4340翻上来 */
-#define FLIP_TOGGLE_SPD  0.5f      /* 4340对接翻转速度 */
+#define RACK_SPEED  15.0f          /* 2325齿条 */
 #define FLIP_UP_POS      0.0f      /* 4340翻上位置 */
 #define FLIP_DOWN_POS   -1.8f      /* 4340翻下取杆位置 */
 #define FLIP_TOGGLE_POS -0.4f    /* 4340对接翻转位置 */
+#define FLIP_GRAB_POS  -1.0f     /* 4340抓取位置3 */
 #define FLIP_MAX         0.0f      /* 4340翻转上限 */
 #define FLIP_MIN        -2.0f      /* 4340翻转下限 */
+#define FLIP_KP          50.0f     /* 4340 MIT KP */
+#define FLIP_KD           5.0f     /* 4340 MIT KD */
 #define RACK_ZERO_TOL    0.2f      /* 齿条回零容差, 开爪前检查 */
+#define RACK_MAX          15.0f     /* 齿条上限 */
+#define RACK_MIN          0.0f      /* 齿条下限 */
 #define GRAB_H_HIGH      25.0f     /* 高位 (CH6上拨) */
 #define GRAB_H_DOCK      14.2f    /* 对接 (CH6中位) */
 #define LIFT_FINE_STEP    0.05f    /* CH1每次微调步长 */
@@ -31,18 +33,19 @@ typedef enum {
     G_CLAW_CLOSE,    /* 4: 关夹爪抓杆 */
     G_FLIP_BACK,     /* 5: 翻回 */
     G_LIFT_RISE,     /* 6: 对接/回零 + CH10手动, CH6切换高度 */
+    G_FLIP_GRAB,     /* 7: 翻转→-1.3 */
 } grab_step_t;
 
 static grab_step_t g_step = G_IDLE;
 static bool     g_last_ch7       = false;  /* CH7 边沿 */
 static uint32_t g_grab_last_tick = 0;      /* 上次调用tick, 检测跨模式断档 */
 static float g_rack = 0.0f;         /* 2325齿条目标 */
-static float g_flip = FLIP_UP_POS;   /* 4310翻转目标 */
-static float g_flip_speed = FLIP_UP_SPEED;
-static bool  g_flip_toggle = false;        /* 步骤6 CH7切换翻转位置 */
+static float g_flip = FLIP_UP_POS;   /* 4340翻转目标 */
+static int   g_flip_cycle  = 0;            /* 步骤7 三态循环 0/1/2 */
 static float    g_ch1_offset     = 0.0f;  /* CH1摇杆微调偏移 */
 static int      g_ch1_zone       = 0;      /* CH1当前区域: -1低/0中/1高 */
 static uint32_t g_ch1_last_tick  = 0;      /* 上次调用tick, 检测跨模式断档 */
+static int      g_rack_dir       = 0;      /* CH10方向: -1缩回, 0停, +1伸出 */
 
 extern bool g_sys_enabled;
 
@@ -50,7 +53,7 @@ extern bool g_sys_enabled;
 
 void grab_init(void)
 {
-    dm_init(&grab_motor[0], 5, DM_MODE_POS, DM_4340);
+    dm_init(&grab_motor[0], 5, DM_MODE_MIT, DM_4340);
     dm_init(&grab_motor[1], 6, DM_MODE_POS, DM_2325);
 }
 
@@ -70,8 +73,9 @@ void grab_reset(void)
 {
     g_step        = G_IDLE;
     g_rack        = 0.0f;
-    g_flip        = FLIP_UP_POS;
-    g_flip_toggle = false;
+    g_rack_dir    = 0;
+    g_flip       = FLIP_UP_POS;
+    g_flip_cycle = 0;
     g_ch1_offset  = 0.0f;
     YV3(0);
 }
@@ -82,7 +86,7 @@ void grab_update(SBUS_t *sbus)
 {
     /* CH7 边沿 → 推进工序 */
     uint32_t now = xTaskGetTickCount();
-    bool ch7 = (sbus->ch[7] < 650);
+    bool ch7 = (sbus->ch[15] < 650);    /* CH15回弹拨杆 */
 
     /* 首次调用 或 距上次超过50ms → 仅同步不推进 (防跨模式误触发) */
     if(g_grab_last_tick == 0 || (now - g_grab_last_tick) > pdMS_TO_TICKS(50))
@@ -90,15 +94,18 @@ void grab_update(SBUS_t *sbus)
         g_last_ch7 = ch7;
         g_grab_last_tick = now;
     }
-    else if(ch7 != g_last_ch7)
+    /* 回弹拨杆: 按下+松开=一次边沿, 在松开时触发 */
+    else if(ch7 && !g_last_ch7)
     {
         g_last_ch7 = ch7;
         g_grab_last_tick = now;
-        if(g_step < G_LIFT_RISE) g_step++;    /* 0→5 线性推进 */
-        else  g_flip_toggle = !g_flip_toggle; /* 步骤6: 切换翻转位置 */
+        if(g_step < G_LIFT_RISE)       g_step++;                  /* 0→5→6 */
+        else if(g_step < G_FLIP_GRAB)  { g_step++; g_flip_cycle=0; } /* 6→7 */
+        else                           g_flip_cycle = (g_flip_cycle+1)%3; /* 7: 三态循环 */
     }
     else
     {
+        g_last_ch7 = ch7;
         g_grab_last_tick = now;
     }
 
@@ -132,27 +139,31 @@ void grab_update(SBUS_t *sbus)
     switch(g_step)
     {
         case G_IDLE:
-            g_flip = FLIP_UP_POS; YV3(0); g_flip_speed = FLIP_UP_SPEED;  break;
+            g_flip = FLIP_UP_POS; YV3(0);  break;
 
         case G_RACK_ZERO:
-            g_flip = FLIP_UP_POS; YV3(0); g_flip_speed = FLIP_UP_SPEED;  break;
+            g_flip = FLIP_UP_POS; YV3(0);  break;
 
         case G_CLAW_OPEN:
             if(g_rack <= RACK_ZERO_TOL) YV3(1);   /* 齿条归零才开爪 */
             break;
 
         case G_FLIP_DOWN:
-            g_flip = FLIP_DOWN_POS; g_flip_speed = FLIP_DOWN_SPEED;  break;
+            g_flip = FLIP_DOWN_POS;  break;
 
         case G_CLAW_CLOSE:
             YV3(0); break;
 
         case G_FLIP_BACK:
-            g_flip = FLIP_UP_POS; g_flip_speed = FLIP_UP_SPEED;  break;
+            g_flip = FLIP_UP_POS;  break;
 
-        case G_LIFT_RISE:     /* CH6高度 + CH7翻转 + CH10手动 */
-            g_flip = g_flip_toggle ? FLIP_TOGGLE_POS : FLIP_UP_POS;
-            g_flip_speed = FLIP_TOGGLE_SPD;
+        case G_LIFT_RISE:     /* CH6高度 + CH10手动 */
+            g_flip = FLIP_UP_POS;
+            break;
+
+        case G_FLIP_GRAB:     /* 三态循环: 0→-0.4→-1.0 */
+            g_flip = (g_flip_cycle == 0) ? FLIP_UP_POS :
+                     (g_flip_cycle == 1) ? FLIP_TOGGLE_POS : FLIP_GRAB_POS;
             break;
 
         default:
@@ -172,10 +183,13 @@ float grab_lift_target(uint16_t ch6)
 
 /* ================================================================ */
 
-/* CH10 全局齿条控制 (无模式限制) */
+/* CH10 增量齿条: 前推→伸出, 后拉→缩回 (仅设方向, 实际步进在grab_task) */
 void grab_update_rack(uint16_t ch10)
 {
-    g_rack = Map((float)ch10, 326.0f, 1659.0f, 0.0f, 12.0f);
+    float ch = (float)ch10;
+    if      (ch > 1012.0f) g_rack_dir =  1;
+    else if (ch < 972.0f)  g_rack_dir = -1;
+    else                   g_rack_dir =  0;
 }
 
 /* ================================================================ */
@@ -189,7 +203,16 @@ void grab_task(void *parameter)
             float flip = g_flip;
             if(flip > FLIP_MAX) flip = FLIP_MAX;
             if(flip < FLIP_MIN) flip = FLIP_MIN;
-            dm_pos_ctrl(&LIFT_CAN, 5, flip, g_flip_speed); vTaskDelay(2);
+            dm_mit_ctrl(&LIFT_CAN, &grab_motor[0], flip, 0.0f, FLIP_KP, FLIP_KD, 0.0f);
+            vTaskDelay(2);
+
+            /* 齿条增量: 按电机速度步进, 松手即停 */
+            float rslew = RACK_SPEED * 0.02f;  /* 每20ms步进 */
+            if(g_rack_dir > 0)       g_rack += rslew;
+            else if(g_rack_dir < 0)  g_rack -= rslew;
+
+            if(g_rack > RACK_MAX) g_rack = RACK_MAX;
+            if(g_rack < RACK_MIN) g_rack = RACK_MIN;
             dm_pos_ctrl(&LIFT_CAN, 6, g_rack, RACK_SPEED);
         }
         vTaskDelay(20);

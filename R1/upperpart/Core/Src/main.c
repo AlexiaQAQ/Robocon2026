@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "can.h"
 #include "dma.h"
 #include "spi.h"
@@ -94,9 +93,9 @@ static inline bool ch_mid(int ch)  { return sbus_ch.ch[ch] >= 650 && sbus_ch.ch[
 
 static void system_enable_handler(void)
 {
-    bool ch4 = (ch_mid(4) || ch_high(4));
+    bool ch4 = ch_high(4);                 /* 两档: 下拨=解锁 */
 
-    if(ch4 && !last_ch4)                    /* 上沿 -> 解锁 */
+    if(ch4 && !last_ch4)                    /* 下拨沿 -> 解锁 */
     {
         lift_enable();
         arm_enable();
@@ -146,29 +145,22 @@ void sbus_task(void *parameter)
             last_sbus_tick = xTaskGetTickCount();
             system_enable_handler();
 
-            /* CH4 中位 + CH7 边沿 → 串口发送指令 */
+            /* CH7 每次切换 → 串口IR (无条件) */
             {
-                static bool ch7_ser_last  = false;
-                static bool ch4_was_mid   = false;
-                bool ch4_is_mid = ch_mid(4);
+                static bool ch7_ir_last = false;
                 bool ch7 = (sbus_ch.ch[7] < 650);
 
-                if(ch4_is_mid && !ch4_was_mid)
-                    ch7_ser_last = ch7;                    /* 刚进入中位, 同步 */
-                else if(ch4_is_mid && ch7 != ch7_ser_last)
+                if(ch7 != ch7_ir_last)           /* 每次切换都发 */
                 {
-                    ch7_ser_last = ch7;
                     static uint8_t ir_cmd[] = {0xA1, 0xF1, 0xCC, 0x01, 0xEE};
                     HAL_UART_Transmit_DMA(&huart1, ir_cmd, 5);
                     HAL_UART_Transmit_DMA(&huart2, ir_cmd, 5);
                     HAL_UART_Transmit_DMA(&huart3, ir_cmd, 5);
                     HAL_UART_Transmit_DMA(&huart6, ir_cmd, 5);
                 }
-                ch4_was_mid = ch4_is_mid;
+                ch7_ir_last = ch7;
             }
 
-            if(!ch_mid(4))      /* CH4 中位时独占串口模式, 跳过 CH5 调度 */
-            {
             /* ---- CH5 模式消抖 ---- */
             typedef enum { M_NONE, M_GRAB, M_SUCTION, M_PLACE } mode_t;
             static mode_t    g_mode_cur = M_NONE;
@@ -176,10 +168,10 @@ void sbus_task(void *parameter)
             static uint32_t  g_mode_tick = 0;
 
             mode_t mode_raw;
-            if(ch_low(5))       mode_raw = M_GRAB;
-            else if(ch_mid(5))  mode_raw = M_SUCTION;
-            else if(ch_high(5)) mode_raw = M_PLACE;
-            else                mode_raw = M_NONE;
+            if(ch_low(12))       mode_raw = M_GRAB;
+            else if(ch_mid(12))  mode_raw = M_SUCTION;
+            else if(ch_high(12)) mode_raw = M_PLACE;
+            else                 mode_raw = M_NONE;
 
             if(mode_raw != g_mode_new)
             {
@@ -211,7 +203,7 @@ void sbus_task(void *parameter)
                                            LIFT_H_2F;   /* 中位→中 */
                 lift_update(base + offset);
 
-                bool sel = (sbus_ch.ch[11] > 1000);
+                bool sel = (sbus_ch.ch[13] > 1300);  /* CH13下拨=左臂, 上拨=右臂 */
                 arm_update(&sbus_ch, sel, true);
                 break;
                 }
@@ -226,18 +218,24 @@ void sbus_task(void *parameter)
                 float base = ch_low(6) ? LIFT_H_PLACE_A : LIFT_H_PLACE_B;
                 lift_update(base + offset);
 
-                bool sel = (sbus_ch.ch[11] > 1000);
+                bool sel = (sbus_ch.ch[13] > 1300);  /* CH13下拨=左臂, 上拨=右臂 */
                 arm_update(&sbus_ch, sel, true);
                 break;
                 }
 
             default: break;
             }
-            }  /* !ch_mid(4) */
 
-            /* CH8左吸盘 CH9右吸盘 CH10齿条, 所有模式有效 */
-            YV1(sbus_ch.ch[8] > 1300 ? 1 : 0);
-            YV2(sbus_ch.ch[9] > 1300 ? 1 : 0);
+            /* 吸盘: 臂打下→吸(锁存), CH11前推关左/后拉关右 */
+            {
+                static bool suction_L = false, suction_R = false;
+                if(arm_is_left_down())  suction_L = true;
+                if(arm_is_right_down()) suction_R = true;
+                if(ch_high(11)) suction_L = false;
+                if(ch_low(11))  suction_R = false;
+                YV1(suction_L ? 1 : 0);
+                YV2(suction_R ? 1 : 0);
+            }
             grab_update_rack(sbus_ch.ch[10]);
         }
         else if(!sbus_connected())

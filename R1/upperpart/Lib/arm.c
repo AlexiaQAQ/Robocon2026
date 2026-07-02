@@ -82,7 +82,7 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
 {
     /* CH7 边沿 → 切换选中臂状态 */
     uint32_t now = xTaskGetTickCount();
-    bool ch7 = (sbus->ch[7] < 650);     /* 物理上拨=ch_low */
+    bool ch7 = (sbus->ch[15] < 650);    /* CH15回弹拨杆 */
 
     /* 首次调用 或 距上次超过50ms → 仅同步不切换 */
     if(g_arm_last_tick == 0 || (now - g_arm_last_tick) > pdMS_TO_TICKS(50))
@@ -90,7 +90,8 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
         g_last_ch7 = ch7;
         g_arm_last_tick = now;
     }
-    else if(ch7 != g_last_ch7)
+    /* 回弹拨杆: 按下+松开=一次边沿, 在松开时触发 */
+    else if(ch7 && !g_last_ch7)
     {
         g_last_ch7 = ch7;
         g_arm_last_tick = now;
@@ -101,6 +102,7 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
     }
     else
     {
+        g_last_ch7 = ch7;
         g_arm_last_tick = now;
     }
 
@@ -128,6 +130,11 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
         g_R_tip  = R_TIP_UP_FWD;  /* 45°朝天 */
     }
 }
+
+/* ================================================================ */
+
+bool arm_is_left_down(void)  { return g_arm_L == ARM_DOWN; }
+bool arm_is_right_down(void) { return g_arm_R == ARM_DOWN; }
 
 /* ================================================================ */
 
