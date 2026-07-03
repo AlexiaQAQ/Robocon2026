@@ -19,11 +19,11 @@
 /* 目标位置 */
 #define L_ROOT_UP    -1.57f   /* 左根竖起 */
 #define L_ROOT_DOWN   0.0f    /* 左根水平 */
-#define L_TIP_DOWN   -1.57f   /* 左末朝地 (暂未使用) */
+#define L_TIP_DOWN   -1.57f   /* 左末朝前 (放方块抬起时) */
 #define L_TIP_UP_FWD -0.785f  /* 左末45° (竖起时) */
 #define R_ROOT_UP     1.57f   /* 右根竖起 */
 #define R_ROOT_DOWN   0.0f    /* 右根水平 */
-#define R_TIP_DOWN    1.57f   /* 右末朝地 (暂未使用) */
+#define R_TIP_DOWN    1.57f   /* 右末朝前 (放方块抬起时) */
 #define R_TIP_UP_FWD  0.785f  /* 右末45° (竖起时) */
 
 static motor_t arm_motor[4];    /* [0]左根4340 [1]左末4310 [2]右根4340 [3]右末4310 */
@@ -37,7 +37,7 @@ static arm_state_t g_arm_R = ARM_UP;   /* 右臂 */
 static float g_L_root = L_ROOT_UP, g_L_tip = L_TIP_UP_FWD;
 static float g_R_root = R_ROOT_UP, g_R_tip = R_TIP_UP_FWD;
 
-static bool     g_last_ch7      = false; /* CH7 边沿 */
+static bool     g_last_ch15      = false; /* CH15边沿 */
 static uint32_t g_arm_last_tick = 0;     /* 上次调用tick, 检测跨模式断档 */
 
 extern bool g_sys_enabled;
@@ -80,20 +80,20 @@ void arm_disable(void)
 
 void arm_update(SBUS_t *sbus, bool select_left, bool tip_up_fwd)
 {
-    /* CH7 边沿 → 切换选中臂状态 */
+    /* CH15 边沿 → 切换选中臂状态 */
     uint32_t now = xTaskGetTickCount();
     bool ch15 = (sbus->ch[15] < 650);   /* CH15回弹拨杆 */
 
     /* 首次调用 或 距上次超过50ms → 仅同步不切换 */
     if(g_arm_last_tick == 0 || (now - g_arm_last_tick) > pdMS_TO_TICKS(50))
     {
-        g_last_ch7 = ch15;
+        g_last_ch15 = ch15;
         g_arm_last_tick = now;
     }
     /* 回弹拨杆: 按下+松开=一次边沿, 在松开时触发 */
-    else if(ch15 && !g_last_ch7)
+    else if(ch15 && !g_last_ch15)
     {
-        g_last_ch7 = ch15;
+        g_last_ch15 = ch15;
         g_arm_last_tick = now;
         if(select_left)
             g_arm_L = (g_arm_L == ARM_UP) ? ARM_DOWN : ARM_UP;
@@ -102,7 +102,7 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_up_fwd)
     }
     else
     {
-        g_last_ch7 = ch15;
+        g_last_ch15 = ch15;
         g_arm_last_tick = now;
     }
 

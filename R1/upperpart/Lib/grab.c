@@ -19,8 +19,8 @@
 #define RACK_MIN          0.0f      /* 齿条下限 */
 #define GRAB_H_HIGH      25.0f     /* 高位 (CH6上拨) */
 #define GRAB_H_DOCK      14.2f    /* 对接 (CH6中位) */
-#define LIFT_FINE_STEP    0.05f    /* CH1每次微调步长 */
-#define LIFT_FINE_MAX     3.0f     /* CH1微调最大累积 */
+#define LIFT_FINE_STEP    0.05f    /* CH10每次微调步长 */
+#define LIFT_FINE_MAX     3.0f     /* CH10微调最大累积 */
 
 static motor_t grab_motor[2];       /* [0]=4340翻转 ID5, [1]=2325齿条 ID6 */
 
@@ -37,14 +37,14 @@ typedef enum {
 } grab_step_t;
 
 static grab_step_t g_step = G_IDLE;
-static bool     g_last_ch7       = false;  /* CH7 边沿 */
+static bool     g_last_ch15       = false;  /* CH15边沿 */
 static uint32_t g_grab_last_tick = 0;      /* 上次调用tick, 检测跨模式断档 */
 static float g_rack = 0.0f;         /* 2325齿条目标 */
 static float g_flip = FLIP_UP_POS;   /* 4340翻转目标 */
 static int   g_flip_cycle  = 0;            /* 步骤7 三态循环 0/1/2 */
-static float    g_ch1_offset     = 0.0f;  /* CH1摇杆微调偏移 */
-static int      g_ch1_zone       = 0;      /* CH1当前区域: -1低/0中/1高 */
-static uint32_t g_ch1_last_tick  = 0;      /* 上次调用tick, 检测跨模式断档 */
+static float    g_ch10_offset     = 0.0f;  /* CH10摇杆微调偏移 */
+static int      g_ch10_zone       = 0;      /* CH10区域: -1低/0中/1高 */
+static uint32_t g_ch10_last_tick  = 0;      /* CH10上次调用tick */
 extern bool g_sys_enabled;
 
 /* ================================================================ */
@@ -73,7 +73,7 @@ void grab_reset(void)
     g_rack       = 0.0f;
     g_flip       = FLIP_UP_POS;
     g_flip_cycle = 0;
-    g_ch1_offset  = 0.0f;
+    g_ch10_offset  = 0.0f;
     YV3(0);
 }
 
@@ -81,20 +81,20 @@ void grab_reset(void)
 
 void grab_update(SBUS_t *sbus)
 {
-    /* CH7 边沿 → 推进工序 */
+    /* CH15 边沿 → 推进工序 */
     uint32_t now = xTaskGetTickCount();
     bool ch15 = (sbus->ch[15] < 650);   /* CH15回弹拨杆 */
 
     /* 首次调用 或 距上次超过50ms → 仅同步不推进 (防跨模式误触发) */
     if(g_grab_last_tick == 0 || (now - g_grab_last_tick) > pdMS_TO_TICKS(50))
     {
-        g_last_ch7 = ch15;
+        g_last_ch15 = ch15;
         g_grab_last_tick = now;
     }
     /* 回弹拨杆: 按下+松开=一次边沿, 在松开时触发 */
-    else if(ch15 && !g_last_ch7)
+    else if(ch15 && !g_last_ch15)
     {
-        g_last_ch7 = ch15;
+        g_last_ch15 = ch15;
         g_grab_last_tick = now;
         if(g_step < G_LIFT_RISE)       g_step++;                  /* 0→5→6 */
         else if(g_step < G_FLIP_GRAB)  { g_step++; g_flip_cycle=0; } /* 6→7 */
@@ -102,7 +102,7 @@ void grab_update(SBUS_t *sbus)
     }
     else
     {
-        g_last_ch7 = ch15;
+        g_last_ch15 = ch15;
         g_grab_last_tick = now;
     }
 
@@ -111,24 +111,24 @@ void grab_update(SBUS_t *sbus)
         float ch10 = (float)sbus->ch[10];
         int zone = (ch10 > 1012.0f) ? 1 : (ch10 < 972.0f) ? -1 : 0;
 
-        if(g_ch1_last_tick == 0 || (xTaskGetTickCount() - g_ch1_last_tick) > pdMS_TO_TICKS(50))
+        if(g_ch10_last_tick == 0 || (xTaskGetTickCount() - g_ch10_last_tick) > pdMS_TO_TICKS(50))
         {
-            g_ch1_zone = zone;
-            g_ch1_last_tick = xTaskGetTickCount();
+            g_ch10_zone = zone;
+            g_ch10_last_tick = xTaskGetTickCount();
         }
-        else if(zone != g_ch1_zone)
+        else if(zone != g_ch10_zone)
         {
-            if(zone == 1)       g_ch1_offset += LIFT_FINE_STEP;
-            else if(zone == -1) g_ch1_offset -= LIFT_FINE_STEP;
-            g_ch1_zone = zone;
-            g_ch1_last_tick = xTaskGetTickCount();
+            if(zone == 1)       g_ch10_offset += LIFT_FINE_STEP;
+            else if(zone == -1) g_ch10_offset -= LIFT_FINE_STEP;
+            g_ch10_zone = zone;
+            g_ch10_last_tick = xTaskGetTickCount();
         }
         else
         {
-            g_ch1_last_tick = xTaskGetTickCount();
+            g_ch10_last_tick = xTaskGetTickCount();
         }
-        if(g_ch1_offset >  LIFT_FINE_MAX) g_ch1_offset =  LIFT_FINE_MAX;
-        if(g_ch1_offset < -LIFT_FINE_MAX) g_ch1_offset = -LIFT_FINE_MAX;
+        if(g_ch10_offset >  LIFT_FINE_MAX) g_ch10_offset =  LIFT_FINE_MAX;
+        if(g_ch10_offset < -LIFT_FINE_MAX) g_ch10_offset = -LIFT_FINE_MAX;
     }
 
     switch(g_step)
@@ -172,13 +172,13 @@ void grab_update(SBUS_t *sbus)
 float grab_lift_target(uint16_t ch6)
 {
     if(ch6 > 1300)       return 0.2f;                      /* 下拨→回零 */
-    else if(ch6 >= 650)  return GRAB_H_DOCK + g_ch1_offset; /* 中位→对接 */
-    else                 return GRAB_H_HIGH + g_ch1_offset; /* 上拨→17 */
+    else if(ch6 >= 650)  return GRAB_H_DOCK + g_ch10_offset; /* 中位→对接 */
+    else                 return GRAB_H_HIGH + g_ch10_offset; /* 上拨→17 */
 }
 
 /* ================================================================ */
 
-/* CH10 增量齿条: 前推→伸出, 后拉→缩回 (仅设方向, 实际步进在grab_task) */
+/* CH8 旋钮绝对映射齿条 */
 void grab_update_rack(uint16_t ch8)
 {
     g_rack = Map((float)ch8, 326.0f, 1659.0f, RACK_MIN, RACK_MAX);

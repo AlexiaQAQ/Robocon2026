@@ -162,7 +162,7 @@ void sbus_task(void *parameter)
                 ch7_ir_last = ch7;
             }
 
-            /* ---- CH5 模式消抖 ---- */
+            /* ---- CH12 模式消抖 ---- */
             typedef enum { M_NONE, M_GRAB, M_SUCTION, M_PLACE } mode_t;
             static mode_t    g_mode_cur = M_NONE;
             static mode_t    g_mode_new = M_NONE;
