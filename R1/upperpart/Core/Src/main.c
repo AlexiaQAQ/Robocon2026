@@ -44,14 +44,15 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define SBUS_TIMEOUT_MS 100
-#define MODE_DEBOUNCE_MS 50      /* CH5模式消抖 */
+#define MODE_DEBOUNCE_MS 50      /* CH12模式消抖 */
 #define LIFT_H_3F   28.0f   /* 抬升 3层 */
 #define LIFT_H_2F   18.0f   /* 抬升 2层 (中位) */
 #define LIFT_H_1F   8.0f   /* 抬升 1层 */
-#define LIFT_H_PLACE_A 20.0f  /* 放方块高度 (CH6上/中) */
-#define LIFT_H_PLACE_B 0.0f  /* 放方块高度 (CH6下) */
+#define LIFT_H_PLACE_H  25.0f  /* 放方块 (CH6上) */
+#define LIFT_H_PLACE_M  20.0f  /* 放方块 (CH6中) */
+#define LIFT_H_PLACE_L   0.0f  /* 放方块 (CH6下) */
 #define CH1_FINE_MAX   3.0f  /* CH1微调最大偏移 (吸方块) */
-#define CH1_PLACE_MAX  6.5f  /* CH1微调最大偏移 (放方块) */
+#define CH1_PLACE_MAX  7.0f  /* CH1微调最大偏移 (放方块) */
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -215,7 +216,9 @@ void sbus_task(void *parameter)
                 if      (ch1 > 1012.0f) offset = -Map(ch1, 1012.0f, 1659.0f, 0.0f, CH1_PLACE_MAX);
                 else if (ch1 < 972.0f)  offset =  Map(ch1,  972.0f,  326.0f, 0.0f, CH1_PLACE_MAX);
 
-                float base = ch_low(6) ? LIFT_H_PLACE_A : LIFT_H_PLACE_B;
+                float base = ch_high(6) ? LIFT_H_PLACE_L :   /* 下拨→0 */
+                             ch_low(6)  ? LIFT_H_PLACE_H :   /* 上拨→25 */
+                                           LIFT_H_PLACE_M;   /* 中位→20 */
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[13] > 1300);  /* CH13下拨=左臂, 上拨=右臂 */
@@ -226,17 +229,18 @@ void sbus_task(void *parameter)
             default: break;
             }
 
-            /* 吸盘: 臂打下→吸(锁存), CH11前推关左/后拉关右 */
+            /* 吸盘锁存: 臂打下→吸(放方块高位除外), CH11手动关 */
             {
                 static bool suction_L = false, suction_R = false;
-                if(arm_is_left_down())  suction_L = true;
-                if(arm_is_right_down()) suction_R = true;
+                bool can_suck = !ch_high(12) || ch_high(6); /* 放方块仅最低档触发 */
+                if(arm_is_left_down()  && can_suck) suction_L = true;
+                if(arm_is_right_down() && can_suck) suction_R = true;
                 if(ch_high(11)) suction_L = false;
                 if(ch_low(11))  suction_R = false;
                 YV1(suction_L ? 1 : 0);
                 YV2(suction_R ? 1 : 0);
             }
-            grab_update_rack(sbus_ch.ch[10]);
+            grab_update_rack(sbus_ch.ch[8]);
         }
         else if(!sbus_connected())
         {

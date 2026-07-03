@@ -3,8 +3,8 @@
 #include "cmsis_os.h"
 
 #define ARM_CAN         hcan2
-#define ARM_SPEED_UP    2.0f   /* 抬起速度 */
-#define ARM_SPEED_DOWN  1.3f   /* 放下速度 */
+#define ARM_SPEED_UP    10.0f   /* 抬起速度 */
+#define ARM_SPEED_DOWN  10.0f   /* 放下速度 */
 
 /* 关节限幅 */
 #define L_ROOT_MIN  -1.57f
@@ -82,18 +82,18 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
 {
     /* CH7 边沿 → 切换选中臂状态 */
     uint32_t now = xTaskGetTickCount();
-    bool ch7 = (sbus->ch[15] < 650);    /* CH15回弹拨杆 */
+    bool ch15 = (sbus->ch[15] < 650);   /* CH15回弹拨杆 */
 
     /* 首次调用 或 距上次超过50ms → 仅同步不切换 */
     if(g_arm_last_tick == 0 || (now - g_arm_last_tick) > pdMS_TO_TICKS(50))
     {
-        g_last_ch7 = ch7;
+        g_last_ch7 = ch15;
         g_arm_last_tick = now;
     }
     /* 回弹拨杆: 按下+松开=一次边沿, 在松开时触发 */
-    else if(ch7 && !g_last_ch7)
+    else if(ch15 && !g_last_ch7)
     {
-        g_last_ch7 = ch7;
+        g_last_ch7 = ch15;
         g_arm_last_tick = now;
         if(select_left)
             g_arm_L = (g_arm_L == ARM_UP) ? ARM_DOWN : ARM_UP;
@@ -102,7 +102,7 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
     }
     else
     {
-        g_last_ch7 = ch7;
+        g_last_ch7 = ch15;
         g_arm_last_tick = now;
     }
 

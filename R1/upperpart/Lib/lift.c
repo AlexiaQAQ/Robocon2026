@@ -7,7 +7,7 @@
 extern bool g_sys_enabled;
 
 #define LIFT_CAN    hcan1
-#define LIFT_SPEED  4.5f
+#define LIFT_SPEED  5.0f
 #define LIFT_RETURN_TARGET 0.2f    /* 回零高度 */
 #define LIFT_MAX    29.0f          /* 抬升硬限幅上限 */
 #define LIFT_MIN     0.2f          /* 抬升硬限幅下限 */
@@ -45,6 +45,11 @@ void lift_disable(void)
 void lift_update(float target)
 {
     lift_target = target;
+}
+
+float lift_get_target(void)
+{
+    return lift_target;
 }
 
 void lift_task(void *parameter)
