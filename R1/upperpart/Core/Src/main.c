@@ -205,11 +205,11 @@ void sbus_task(void *parameter)
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[13] > 1300);  /* CH13下拨=左臂, 上拨=右臂 */
-                arm_update(&sbus_ch, sel, true);
+                arm_update(&sbus_ch, sel, true);   /* tip_up_fwd: 吸方块45° */
                 break;
                 }
 
-            case M_PLACE:  /* 放方块: CH6两档+CH1微调+机械臂 */
+            case M_PLACE:  /* 放方块: CH6三档+CH1微调+机械臂 */
                 {
                 float ch1 = (float)sbus_ch.ch[1];
                 float offset = 0.0f;
@@ -222,7 +222,7 @@ void sbus_task(void *parameter)
                 lift_update(base + offset);
 
                 bool sel = (sbus_ch.ch[13] > 1300);  /* CH13下拨=左臂, 上拨=右臂 */
-                arm_update(&sbus_ch, sel, true);
+                arm_update(&sbus_ch, sel, false);  /* tip_up_fwd: 放方块朝前 */
                 break;
                 }
 

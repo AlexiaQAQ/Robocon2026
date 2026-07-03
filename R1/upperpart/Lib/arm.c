@@ -78,7 +78,7 @@ void arm_disable(void)
 
 /* ================================================================ */
 
-void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
+void arm_update(SBUS_t *sbus, bool select_left, bool tip_up_fwd)
 {
     /* CH7 边沿 → 切换选中臂状态 */
     uint32_t now = xTaskGetTickCount();
@@ -110,24 +110,24 @@ void arm_update(SBUS_t *sbus, bool select_left, bool tip_45)
     if(g_arm_L == ARM_DOWN)
     {
         g_L_root = L_ROOT_DOWN;
-        g_L_tip  = tip_45 ? 0.0f : L_TIP_DOWN;  /* 朝前(0°) / 朝地 */
+        g_L_tip  = 0.0f;           /* 放下→末端朝前 */
     }
     else  /* ARM_UP */
     {
         g_L_root = L_ROOT_UP;
-        g_L_tip  = L_TIP_UP_FWD;  /* 45°朝天 */
+        g_L_tip  = tip_up_fwd ? L_TIP_UP_FWD : L_TIP_DOWN;  /* 吸45° / 放朝前 */
     }
 
     /* 右臂目标 */
     if(g_arm_R == ARM_DOWN)
     {
         g_R_root = R_ROOT_DOWN;
-        g_R_tip  = tip_45 ? 0.0f : R_TIP_DOWN;
+        g_R_tip  = 0.0f;           /* 放下→末端朝前 */
     }
     else
     {
         g_R_root = R_ROOT_UP;
-        g_R_tip  = R_TIP_UP_FWD;  /* 45°朝天 */
+        g_R_tip  = tip_up_fwd ? R_TIP_UP_FWD : R_TIP_DOWN;
     }
 }
 
