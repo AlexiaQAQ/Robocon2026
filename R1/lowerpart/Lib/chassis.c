@@ -15,10 +15,10 @@
 /* ---- 初始化 ---- */
 void chassis_init(void)
 {
-    dm_init(&dm_motor[0], 1, DM_MODE_MIT, DM_3519);   // BR
-    dm_init(&dm_motor[1], 2, DM_MODE_MIT, DM_3519);   // FR
-    dm_init(&dm_motor[2], 4, DM_MODE_MIT, DM_3519);   // BL
-    dm_init(&dm_motor[3], 3, DM_MODE_MIT, DM_3519);   // FL
+    dm_init(&dm_motor[0], 1, DM_MODE_SPD, DM_3519);   // BR
+    dm_init(&dm_motor[1], 2, DM_MODE_SPD, DM_3519);   // FR
+    dm_init(&dm_motor[2], 4, DM_MODE_SPD, DM_3519);   // BL
+    dm_init(&dm_motor[3], 3, DM_MODE_SPD, DM_3519);   // FL
 }
 
 /* ---- 使能 (逐个, 间隔 5ms 防止 CAN 拥塞) ---- */
@@ -71,15 +71,10 @@ void chassis_update(void)
     // FL: 45° 右后安装
     motor_out[3] = ( vx_s + vy_s + vw_s);
 
-    // MIT 速度模式: kp=0 纯速度控制, kd 提供阻尼
+    // SPD 速度模式: 直接 float 速度
     for (int i = 0; i < 4; i++)
     {
-        dm_mit_ctrl(&hcan1, &dm_motor[i],
-                     0.0f,            // pos = 0
-                     motor_out[i],    // vel = 目标角速度 (rad/s)
-                     0.0f,            // kp = 0 (纯速度)
-                     CHASSIS_TORQUE,  // kd = 阻尼
-                     0.0f);           // torque = 0
+        dm_spd_ctrl(&hcan1, dm_motor[i].id, motor_out[i]);
         vTaskDelay(1);
     }
 }

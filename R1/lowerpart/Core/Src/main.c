@@ -85,7 +85,7 @@ bool sys_enabled = false;
 static bool last_ch4 = false;
 
 /* ---- 航向角 PID 参数 (Keil Watch 窗口可实时修改) ---- */
-float yaw_gain[3]  = {0.45f, 0.0f, 0.0f};  /* Kp, Ki, Kd */
+float yaw_gain[3]  = {0.6f, 0.0f, 0.06f};  /* Kp, Ki, Kd */
 float yaw_max_out  = 23.0f;                /* PID 输出限幅 (rad/s) */
 float yaw_max_iout = 3.0f;                 /* 积分限幅 */
 float yaw_target   = 0.0f;                 /* 目标航向角 (°) */

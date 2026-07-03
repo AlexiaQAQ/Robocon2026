@@ -251,4 +251,11 @@ targets:
         bin: ""
         interface: cmsis-dap
         target: stm32f4x
+      pyOCD:
+        baseAddr: "0x08000000"
+        bin: ""
+        config: .eide/a_board.pyocd.yaml
+        otherCmds: ""
+        speed: 4M
+        targetName: cortex_m
     uploader: OpenOCD
