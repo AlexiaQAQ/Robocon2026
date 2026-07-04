@@ -117,7 +117,7 @@ static float expo_map(int16_t val, int16_t lo, int16_t hi, int16_t dead, float m
     if (val >= center - dead && val <= center + dead) return 0;
     float t = (float)(abs(val - center) - dead) / (float)((hi - lo) / 2 - dead);
     if (t > 1.0f) t = 1.0f;
-    return (val > center ? 1.0f : -1.0f) * t * max_out;
+    return (val > center ? 1.0f : -1.0f) * t * t * max_out;
 }
 
 bool ch_down(int16_t ch)
@@ -206,13 +206,13 @@ void remote_task(void *parameter)
 			int16_t ch_val;
 
 			ch_val = sbus_ch.ch[2];
-			set_vx = expo_map(ch_val, 326, 1659, 10, 15.0f);
+			set_vx = expo_map(ch_val, 326, 1659, 2, 20.0f);
 
 			ch_val = sbus_ch.ch[3];
-			set_vy = expo_map(ch_val, 326, 1659, 10, 15.0f);
+			set_vy = expo_map(ch_val, 326, 1659, 2, 20.0f);
 
 			ch_val = sbus_ch.ch[0];
-			float stick_vw = expo_map(ch_val, 326, 1659, 10, 10.0f);
+			float stick_vw = expo_map(ch_val, 326, 1659, 2, 16.0f);
 			if (stick_vw != 0.0f)
 			{
 				/* 摇杆偏转 → 开环跟手, 记录目标 */
