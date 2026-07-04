@@ -3,8 +3,10 @@
 #include "cmsis_os.h"
 
 #define ARM_CAN         hcan2
-#define ARM_SPEED_UP    10.0f   /* 抬起速度 */
-#define ARM_SPEED_DOWN  10.0f   /* 放下速度 */
+#define ARM_SPEED_UP    10.0f   /* 根部抬起速度 */
+#define ARM_SPEED_DOWN  10.0f   /* 根部放下速度 */
+#define TIP_SPEED_UP    1.0f   /* 末端抬起速度 */
+#define TIP_SPEED_DOWN  1.0f   /* 末端放下速度 */
 
 /* 关节限幅 */
 #define L_ROOT_MIN  -1.57f
@@ -144,19 +146,21 @@ void arm_task(void *parameter)
     {
         if(g_sys_enabled)
         {
-            float r, spd;
+            float r, root_spd, tip_spd;
             /* 左臂: ID1根, ID2末 */
-            spd = (g_arm_L == ARM_DOWN) ? ARM_SPEED_DOWN : ARM_SPEED_UP;
+            root_spd = (g_arm_L == ARM_DOWN) ? ARM_SPEED_DOWN : ARM_SPEED_UP;
+            tip_spd  = (g_arm_L == ARM_DOWN) ? TIP_SPEED_DOWN  : TIP_SPEED_UP;
             r = clampf(g_L_root, L_ROOT_MIN, L_ROOT_MAX);
-            dm_pos_ctrl(&ARM_CAN, 1, r, spd); vTaskDelay(2);
+            dm_pos_ctrl(&ARM_CAN, 1, r, root_spd); vTaskDelay(2);
             r = clampf(g_L_tip, L_TIP_MIN, L_TIP_MAX);
-            dm_pos_ctrl(&ARM_CAN, 2, r, spd); vTaskDelay(2);
+            dm_pos_ctrl(&ARM_CAN, 2, r, tip_spd);  vTaskDelay(2);
             /* 右臂: ID3根, ID4末 */
-            spd = (g_arm_R == ARM_DOWN) ? ARM_SPEED_DOWN : ARM_SPEED_UP;
+            root_spd = (g_arm_R == ARM_DOWN) ? ARM_SPEED_DOWN : ARM_SPEED_UP;
+            tip_spd  = (g_arm_R == ARM_DOWN) ? TIP_SPEED_DOWN  : TIP_SPEED_UP;
             r = clampf(g_R_root, R_ROOT_MIN, R_ROOT_MAX);
-            dm_pos_ctrl(&ARM_CAN, 3, r, spd); vTaskDelay(2);
+            dm_pos_ctrl(&ARM_CAN, 3, r, root_spd); vTaskDelay(2);
             r = clampf(g_R_tip, R_TIP_MIN, R_TIP_MAX);
-            dm_pos_ctrl(&ARM_CAN, 4, r, spd);
+            dm_pos_ctrl(&ARM_CAN, 4, r, tip_spd);
         }
         vTaskDelay(20);
     }
