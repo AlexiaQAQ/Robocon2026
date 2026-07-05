@@ -10,6 +10,7 @@
 
 /* ==================== DMA 接收缓冲区 ==================== */
 uint8_t uart1_rx_buf[CTRL_FRAME_LEN];
+volatile uint8_t ctrl_frame_ready = 0;
 
 /* ==================== 解析后的协议变量 ==================== */
 
@@ -186,6 +187,11 @@ static inline uint16_t read_uint16(const uint8_t *buf)
 
 static void parse_ctrl_frame(void)
 {
+    /* IDLE 中断检测到完整帧后才解析 (防半帧, 100Hz 读 vs 50Hz 发) */
+    if (!ctrl_frame_ready)
+        return;
+    ctrl_frame_ready = 0;
+
     // 帧头尾校验
     if (uart1_rx_buf[0] != 0xCC || uart1_rx_buf[CTRL_FRAME_LEN - 1] != 0xEE)
     {
@@ -238,10 +244,8 @@ void uart_task(void *parameter)
         if (sys_enabled && sbus_frame_valid() && ch_high(5))
         {
             parse_ctrl_frame();
-
-            // 状态帧 50Hz → USART2 TX (上位机 RX)
             build_status_frame();
-            HAL_UART_Transmit(&huart2, stat_buf, STAT_FRAME_LEN, HAL_MAX_DELAY);
+            HAL_UART_Transmit_DMA(&huart2, stat_buf, STAT_FRAME_LEN);
         }
 
         vTaskDelay(20);  // 50Hz
