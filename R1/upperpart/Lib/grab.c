@@ -18,7 +18,7 @@
 #define RACK_MAX          15.0f     /* 齿条上限 */
 #define RACK_MIN          0.0f      /* 齿条下限 */
 #define GRAB_H_HIGH      25.0f     /* 高位 (CH6上拨) */
-#define GRAB_H_DOCK      14.2f    /* 对接 (CH6中位) */
+#define GRAB_H_DOCK      14.7f    /* 对接 (CH6中位) */
 #define LIFT_FINE_STEP    0.05f    /* CH10每次微调步长 */
 #define LIFT_FINE_MAX     3.0f     /* CH10微调最大累积 */
 
@@ -73,8 +73,7 @@ void grab_reset(void)
     g_rack       = 0.0f;
     g_flip       = FLIP_UP_POS;
     g_flip_cycle = 0;
-    g_ch10_offset  = 0.0f;
-    YV3(0);
+    YV3(0);                        /* CH10偏移不清零, 掉电才消失 */
 }
 
 /* ================================================================ */
