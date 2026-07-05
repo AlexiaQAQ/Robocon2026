@@ -85,7 +85,7 @@ bool sys_enabled = false;
 static bool last_ch4 = false;
 
 /* ---- 航向角 PID 参数 (Keil Watch 窗口可实时修改) ---- */
-float yaw_gain[3]  = {0.6f, 0.0f, 0.06f};  /* Kp, Ki, Kd */
+float yaw_gain[3]  = {0.65f, 0.0f, 0.06f};  /* Kp, Ki, Kd */
 float yaw_max_out  = 23.0f;                /* PID 输出限幅 (rad/s) */
 float yaw_max_iout = 3.0f;                 /* 积分限幅 */
 float yaw_target   = 0.0f;                 /* 目标航向角 (°) */
@@ -206,13 +206,13 @@ void remote_task(void *parameter)
 			int16_t ch_val;
 
 			ch_val = sbus_ch.ch[2];
-			set_vx = expo_map(ch_val, 326, 1659, 2, 20.0f);
+			set_vx = expo_map(ch_val, 326, 1659, 1, 15.0f);
 
 			ch_val = sbus_ch.ch[3];
-			set_vy = expo_map(ch_val, 326, 1659, 2, 20.0f);
+			set_vy = expo_map(ch_val, 326, 1659, 1, 15.0f);
 
 			ch_val = sbus_ch.ch[0];
-			float stick_vw = expo_map(ch_val, 326, 1659, 2, 16.0f);
+			float stick_vw = expo_map(ch_val, 326, 1659, 2, 10.0f);
 			if (stick_vw != 0.0f)
 			{
 				/* 摇杆偏转 → 开环跟手, 记录目标 */
