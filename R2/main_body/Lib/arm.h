@@ -49,11 +49,11 @@
 
 /* ---- fast 模式 ---- */
 #define ARM_L1_VEL_FAST  0.85f
-#define ARM_L2_VEL_FAST  1.35f
-#define ARM_L3_VEL_FAST  0.85f
+#define ARM_L2_VEL_FAST  1.43f
+#define ARM_L3_VEL_FAST  0.88f
 #define ARM_R1_VEL_FAST  0.85f
-#define ARM_R2_VEL_FAST  1.35f
-#define ARM_R3_VEL_FAST  0.85f
+#define ARM_R2_VEL_FAST  1.43f
+#define ARM_R3_VEL_FAST  0.88f
 
 /* ==================== 原点位置 (机械零位, rad) ==================== */
 
