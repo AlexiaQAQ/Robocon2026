@@ -12,6 +12,15 @@
 uint8_t uart1_rx_buf[CTRL_FRAME_LEN];
 volatile uint8_t ctrl_frame_ready = 0;
 
+/* DMA TX 完成标志 */
+static volatile uint8_t uart2_tx_done = 1;
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART2)
+        uart2_tx_done = 1;
+}
+
 /* ==================== 解析后的协议变量 ==================== */
 
 /* 抬升 */
@@ -241,11 +250,19 @@ void uart_task(void *parameter)
 {
     while (1)
     {
-        if (sys_enabled && sbus_frame_valid() && ch_high(5))
+        if (sys_enabled && ch_high(5))
         {
-            parse_ctrl_frame();
-            build_status_frame();
-            HAL_UART_Transmit_DMA(&huart2, stat_buf, STAT_FRAME_LEN);
+            /* 控制帧解析依赖 SBUS 有效性 (防误判) */
+            if (sbus_frame_valid())
+                parse_ctrl_frame();
+
+            /* 状态帧发送不依赖 SBUS (避免 SBUS 丢帧导致上位机收不到) */
+            if (uart2_tx_done)
+            {
+                uart2_tx_done = 0;
+                build_status_frame();
+                HAL_UART_Transmit_DMA(&huart2, stat_buf, STAT_FRAME_LEN);
+            }
         }
 
         vTaskDelay(20);  // 50Hz

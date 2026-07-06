@@ -228,9 +228,9 @@ void sbus_task(void *parameter)
 						sucker_on = !sucker_on;
 						YV2(sucker_on ? 1 : 0);     // 左吸盘
 						YV3(sucker_on ? 1 : 0);     // 右吸盘
+						last_ch7_state = ch7_now;
 					}
 				}
-				last_ch7_state = ch7_now;
 			}
 
 		/* CH5 falling edge: notify upper computer on mode switch */
@@ -262,8 +262,8 @@ void up_cs_task(void *parameter)
 	{
 		if (sys_enabled)
 		{
-			float lift_vel;     // 抬升速度, 由 lift_mode 控制
-			float flip_vel;     // 夹爪翻转速度, 手动慢/自动快
+			float lift_vel = LIFT_VEL_SLOW;     // 抬升速度, 由 lift_mode 控制
+			float flip_vel = GRIPPER_FLIP_VEL_SLOW; // 夹爪翻转速度, 手动慢/自动快
 
 			if (sbus_frame_valid() && !ch_high(5))
 			{
@@ -438,7 +438,6 @@ int main(void)
   MX_UART4_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
 	if (xTaskCreate(start_task, "start_task", 256, NULL, 0, NULL) != pdPASS)
 	{
@@ -509,6 +508,10 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
+  /** Enables the Clock Security System
+  */
+  HAL_RCC_EnableCSS();
 }
 
 /* USER CODE BEGIN 4 */
