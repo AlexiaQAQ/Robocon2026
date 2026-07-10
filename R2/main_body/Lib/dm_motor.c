@@ -1,5 +1,6 @@
 #include "dm_motor.h"
 #include <string.h>
+#include "cmsis_os.h"
 
 motor_t dm_motor[8];
 
@@ -215,7 +216,15 @@ static HAL_StatusTypeDef dm_send_cmd(CAN_HandleTypeDef *hcan, motor_t *motor, ui
 {
     uint8_t data[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, cmd};
     uint16_t id = motor->id;
-    return dm_can_send(hcan, id, data, 8);
+    HAL_StatusTypeDef status;
+    /* 重试最多3次, 防邮箱满导致 enable/disable 丢失 */
+    for (int retry = 0; retry < 3; retry++)
+    {
+        status = dm_can_send(hcan, id, data, 8);
+        if (status == HAL_OK) return status;
+        vTaskDelay(2);
+    }
+    return status;
 }
 
 /* ================================================================

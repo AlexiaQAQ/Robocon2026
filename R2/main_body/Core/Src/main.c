@@ -211,8 +211,9 @@ void sbus_task(void *parameter)
 				int16_t ch6_val = sbus_ch.ch[6];
 				bool ch7_now = sbus_ch.ch[7] > 1700;
 
-				if (sbus_frame_valid() && ch7_now != last_ch7_state)
+				if (sbus_frame_valid() && !last_ch7_state && ch7_now)
 				{
+					/* CH7 上升沿 (防松开二次触发+last仅有效帧更新) */
 					if (ch6_val < 632)              // CH6 低档 ~240: 翻转电机
 					{
 						gripper_flip_pos   = (gripper_flip_pos < 0.5f) ? 1.57f : 0.0f;
@@ -228,9 +229,10 @@ void sbus_task(void *parameter)
 						sucker_on = !sucker_on;
 						YV2(sucker_on ? 1 : 0);     // 左吸盘
 						YV3(sucker_on ? 1 : 0);     // 右吸盘
-						last_ch7_state = ch7_now;
 					}
 				}
+				if (sbus_frame_valid())
+					last_ch7_state = ch7_now;
 			}
 
 		/* CH5 falling edge: notify upper computer on mode switch */
