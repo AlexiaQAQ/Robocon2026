@@ -4,6 +4,7 @@
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
 [![IDE](https://img.shields.io/badge/IDE-VSCode%20%2B%20EIDE%20%2F%20Keil-007ACC)](https://code.visualstudio.com/)
 [![Board](https://img.shields.io/badge/Board-自制A板-555555)]()
+[![Award](https://img.shields.io/badge/Award-国家一等奖-FFD700)]()
 
 > 📖 [English version](README.en.md)
 

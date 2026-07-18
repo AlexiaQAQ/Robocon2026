@@ -2,18 +2,19 @@
 
 [![MCU](https://img.shields.io/badge/MCU-STM32F407VET6-03234B?logo=stmicroelectronics)](https://www.st.com/en/microcontrollers-microprocessors/stm32f407ve.html)
 [![RTOS](https://img.shields.io/badge/RTOS-FreeRTOS-6DB33F)](https://www.freertos.org/)
-[![IDE](https://img.shields.io/badge/IDE-VSCode%20%2B%20EIDE%20%2F%20Keil-007ACC)](https://code.visualstudio.com/)
-[![Board](https://img.shields.io/badge/Board-自制A板-555555)]()
+[![Award](https://img.shields.io/badge/Award-国家一等奖-FFD700)]()
 
 ## 概述
 
-本项目为 Robocon 2026 赛季 R1 机器人**上层**主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS** 实时操作系统开发。
+**🏆 全国大学生机器人大赛 Robocon 2026 — 国家一等奖**
+
+本项目为 R1 机器人**上层**主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS** 实时操作系统开发。
 
 > **硬件平台**: 自制 A 板（与 R2 主控相同），非 Robomaster 开发板 A 型。R1 下层底盘使用 Robomaster 开发板 A 型（STM32F427IIHx）。上下层各有独立 SBUS 接收机，无线路连接。
 
 R1 上层负责：4×DM4340 抬升平台、左右双机械臂（2×2 关节）、抓取机构（齿条+翻转+夹爪）、吸盘电磁阀。与下层底盘共享遥控器，各自独立解析 SBUS。
 
-> **2026-06-19**: 模块化重构 — 抬升/机械臂/抓取拆分独立状态机库，main.c 只做调度
+> **2026-07-04**: 🏆 全国一等奖 — 所有功能稳定运行至比赛结束
 
 ---
 
