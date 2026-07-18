@@ -222,7 +222,7 @@ static HAL_StatusTypeDef dm_send_cmd(CAN_HandleTypeDef *hcan, motor_t *motor, ui
     {
         status = dm_can_send(hcan, id, data, 8);
         if (status == HAL_OK) return status;
-        vTaskDelay(2);
+        vTaskDelay(1);
     }
     return status;
 }
