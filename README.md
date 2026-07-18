@@ -12,6 +12,12 @@ RC2026/
 └── R2/                  # 第二台车 (自制A板, STM32F407VET6)
 ```
 
+## 算法仓库
+
+视觉、决策、上位机等算法代码在独立的仓库中：
+
+[https://github.com/inkccc/Rc2026](https://github.com/inkccc/Rc2026)
+
 ## 各子项目
 
 | 项目 | 板型 | MCU | 功能 |
