@@ -2,6 +2,12 @@
 
 🏆 **全国一等奖** — 2026 赛季
 
+## 硬件开源
+
+自制 A 板 (STM32F407VET6) 原理图 & PCB：
+
+[![Open Source Hardware](https://img.shields.io/badge/开源硬件-LCEDA-FF6B6B)](https://oshwhub.com/alexia0/project_krimgbaw)
+
 ## 结构
 
 ```

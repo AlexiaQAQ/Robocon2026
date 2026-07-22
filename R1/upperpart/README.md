@@ -10,6 +10,8 @@
 
 本项目为 R1 机器人**上层**主控制板固件，基于 **STM32F407VET6** (Cortex-M4F, 168MHz) + **FreeRTOS** 实时操作系统开发。
 
+> 🛠️ **硬件开源**: 自制 A 板原理图 & PCB → [立创开源链接](https://oshwhub.com/alexia0/project_krimgbaw)
+
 > **硬件平台**: 自制 A 板（与 R2 主控相同），非 Robomaster 开发板 A 型。R1 下层底盘使用 Robomaster 开发板 A 型（STM32F427IIHx）。上下层各有独立 SBUS 接收机，无线路连接。
 
 R1 上层负责：4×DM4340 抬升平台、左右双机械臂（2×2 关节）、抓取机构（齿条+翻转+夹爪）、吸盘电磁阀。与下层底盘共享遥控器，各自独立解析 SBUS。

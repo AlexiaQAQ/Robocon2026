@@ -151,6 +151,12 @@
 
 ---
 
+## 硬件开源
+
+自制 A 板 (STM32F407VET6) — 立创开源平台：
+
+[![Open Source Hardware](https://img.shields.io/badge/开源硬件-LCEDA-FF6B6B)](https://oshwhub.com/alexia0/project_krimgbaw)
+
 ## 构建产物
 
 | 项目 | Flash | RAM |
